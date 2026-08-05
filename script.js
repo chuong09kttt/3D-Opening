@@ -607,10 +607,7 @@ function reset() {
     speak("Đã reset về mặc định");
 }
 
-function help() {
-    window.open("https://drive.google.com/file/d/14NNDzXSCG63m1yQZb51tZhrZfd5k8KPf/view?usp=sharing");
-    log("📖 Đang mở hướng dẫn...", 'system');
-}
+
 
 // Input listeners
 document.querySelectorAll("input").forEach(i => {
@@ -619,14 +616,6 @@ document.querySelectorAll("input").forEach(i => {
 
 window.addEventListener("resize", draw);
 
-// Auto-start draw
-draw();
-log("🚀 3D Opening Tool Pro ready", 'system');
-log("💡 Nhấn nút Voice và nói thông số", 'system');
-log("📝 Ví dụ: 'chiều dài 500, chiều rộng 300, chiều cao 200'", 'system');
-
-
-// Thêm vào cuối file script.js
 
 // Help Modal Functions
 function help() {
@@ -655,3 +644,15 @@ document.addEventListener('keydown', function(e) {
         closeHelp();
     }
 });
+
+
+
+// Auto-start draw
+draw();
+log("🚀 3D Opening Tool Pro ready", 'system');
+log("💡 Nhấn nút Voice và nói thông số", 'system');
+log("📝 Ví dụ: 'chiều dài 500, chiều rộng 300, chiều cao 200'", 'system');
+
+
+// Thêm vào cuối file script.js
+
