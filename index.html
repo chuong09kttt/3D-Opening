@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D Opening & Cut Zone Tool Pro</title>
+    <title>3D Opening Tool Pro</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 </head>
@@ -15,10 +15,7 @@
         <div class="canvas-header">
             <div class="canvas-title">
                 <span class="live-indicator"></span>
-                3D Model Viewer
-            </div>
-            <div class="canvas-actions">
-                <span class="fps-display">60 FPS</span>
+                Model Viewer
             </div>
         </div>
         <canvas id="view"></canvas>
@@ -75,7 +72,7 @@
                 </div>
             </div>
 
-            <!-- 3. CORNER RADIUS -->
+            <!-- 3. CORNER RADIUS (Fixed 1 row) -->
             <div class="control-group">
                 <div class="group-header">
                     <span class="icon">⭕</span>
@@ -145,21 +142,17 @@
         <!-- Action Buttons -->
         <div class="action-bar">
             <button class="btn btn-primary" onclick="saveFile()">
-                <span class="btn-icon">💾</span>
-                Export
+                <span class="btn-icon">💾</span> Export
             </button>
             <button class="btn btn-voice" onclick="voice()" id="voiceBtn">
-                <span class="btn-icon">🎤</span>
-                <span class="btn-text">Voice</span>
+                <span class="btn-icon">🎤</span> Voice
                 <span class="voice-pulse"></span>
             </button>
             <button class="btn btn-help" onclick="help()">
-                <span class="btn-icon">❓</span>
-                Help
+                <span class="btn-icon">❓</span> Help
             </button>
             <button class="btn btn-reset" onclick="reset()">
-                <span class="btn-icon">↺</span>
-                Reset
+                <span class="btn-icon">↺</span> Reset
             </button>
         </div>
 
@@ -175,7 +168,7 @@
     </div>
 </div>
 
-<!-- Help Modal -->
+<!-- Help Modal - FIXED DARK TEXT -->
 <div class="modal-overlay" id="helpModal">
     <div class="modal">
         <div class="modal-header">
@@ -197,8 +190,8 @@
                 <div class="help-step">
                     <div class="step-number">2</div>
                     <div class="step-content">
-                        <h4>📍 Thiết lập vị trí</h4>
-                        <p>Điều chỉnh tọa độ <strong>X, Y, Z</strong> để định vị Opening trong không gian 3D.</p>
+                        <h4>🔄 Chọn hướng (Orientation)</h4>
+                        <p>Chọn trục chính cho Opening: <strong>X, Y, hoặc Z</strong>. Model sẽ xoay tương ứng.</p>
                     </div>
                 </div>
                 <div class="help-step">
@@ -211,8 +204,8 @@
                 <div class="help-step">
                     <div class="step-number">4</div>
                     <div class="step-content">
-                        <h4>🔄 Chọn hướng (Orientation)</h4>
-                        <p>Chọn trục chính cho Opening: <strong>X, Y, hoặc Z</strong>. Model sẽ xoay tương ứng.</p>
+                        <h4>📍 Thiết lập vị trí</h4>
+                        <p>Điều chỉnh tọa độ <strong>X, Y, Z</strong> để định vị Opening trong không gian 3D.</p>
                     </div>
                 </div>
                 <div class="help-step">
@@ -247,9 +240,9 @@
             </div>
         </div>
         <div class="modal-body">
-            <p style="color: rgba(255,255,255,0.6); margin-bottom: 16px;">Hệ thống đã nhận đủ dữ liệu. Vui lòng đặt tên cho file xuất ra:</p>
+            <p style="color: rgba(255,255,255,0.7); margin-bottom: 16px;">Hệ thống đã nhận đủ dữ liệu. Vui lòng đặt tên cho file xuất ra:</p>
             <div class="input-wrapper" style="width: 100%;">
-                <input id="saveFileName" type="text" value="Opening" style="width: 100%; height: 44px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; color: #fff; font-size: 16px; padding: 0 14px; outline: none; font-family: 'Inter', sans-serif;">
+                <input id="saveFileName" type="text" value="Opening" style="width: 100%; height: 40px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 15px; padding: 0 14px; outline: none; font-family: 'Inter', sans-serif;">
             </div>
         </div>
         <div class="modal-footer">
