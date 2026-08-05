@@ -7,7 +7,7 @@ let recognition = null;
 let silenceTimer = null;
 let partialTranscript = '';
 let isSpeaking = false;
-let hasAutoTriggeredSave = false; // Ngăn việc gọi hộp thoại lưu nhiều lần liên tục
+let hasAutoTriggeredSave = false; 
 
 // Voice recognition with silence detection
 function initVoice() {
@@ -136,13 +136,18 @@ function parseInputValue(id) {
     return parseFloat(raw) || 0;
 }
 
+// Logic 3D xoay chuẩn xác dựa trên trục tọa độ
 function draw() {
     c.width = c.offsetWidth;
     c.height = c.offsetHeight || 320;
 
     let L = parseInputValue("dx");
     let W = parseInputValue("dy");
-    let T = parseInputValue("dz"); // Changed to Thickness
+    let T = parseInputValue("dz"); // Thickness
+
+    let posX = parseInputValue("px");
+    let posY = parseInputValue("py");
+    let posZ = parseInputValue("pz");
 
     ctx.clearRect(0, 0, c.width, c.height);
 
@@ -157,34 +162,32 @@ function draw() {
     if (L === 0 && W === 0 && T === 0) return;
 
     let maxDim = Math.max(L, W, T, 100);
-    let scale = 110 / maxDim;
+    let scale = 90 / maxDim;
 
     let l = L * scale;
     let w = W * scale;
-    let t = T * scale; // Thickness in 3D space
+    let t = T * scale; 
 
-    let cx = c.width / 2 - 20;
-    let cy = c.height / 2 + 30;
+    // Tịnh tiến tâm model ra giữa màn hình + cộng thêm vị trí người dùng nhập (PosX, PosY, PosZ) đã được scale
+    let cx = c.width / 2 - 20 + (posX * scale);
+    let cy = c.height / 2 + 30 - (posZ * scale); // Trục Z trong 3D tương ứng chiều âm của Y trên Canvas
 
-    // --- FIX: ORIENTATION REAL-TIME LOGIC ---
-    // Logic đảm bảo Thickness (Trục Z của Model) luôn trùng với hướng Orientation được chọn (X, Y, hoặc Z).
+    // --- ORIENTATION LOGIC (Projection) ---
+    // Chiều dài (Length) luôn nằm theo phương X (Trục hoành).
+    // Chiều Rộng (Width) luôn nằm ở chiều sâu.
+    // Chiều Dày (Thickness) sẽ thay đổi hướng dựa trên Orientation.
+    let vX, vY, vZ; // kích thước 3 cạnh theo không gian 3D
+    
     if (ORI === "Z") {
-        drawBox3D(cx, cy, l, w, t, `L=${L}`, `W=${W}`, `T=${T}`);
+        vX = l; vY = w; vZ = t; // Dày hướng Z
     } else if (ORI === "X") {
-        // Xoay sao cho Thickness nằm dọc trục X. Trong phép chiếu 2D, hoán đổi L và T
-        drawBox3D(cx, cy, t, w, l, `L=${L}`, `W=${W}`, `T=${T}`); 
-        // Ghi chú hướng trực quan
-        ctx.fillStyle = 'rgba(255,255,255,0.2)';
-        ctx.font = '11px Inter, sans-serif';
-        ctx.fillText('← X (Thickness)', 30, 30);
+        vX = t; vY = w; vZ = l; // Dày hướng X (đảo L và T)
     } else if (ORI === "Y") {
-        // Xoay sao cho Thickness nằm dọc trục Y. Trong phép chiếu 2D, hoán đổi chiều sâu hiển thị.
-        // Đơn giản hóa bằng cách giữ dạng box nhưng chuyển đổi chiều view.
-        drawBox3D(cx, cy, l, t, w, `L=${L}`, `W=${W}`, `T=${T}`);
-        ctx.fillStyle = 'rgba(255,255,255,0.2)';
-        ctx.font = '11px Inter, sans-serif';
-        ctx.fillText('↑ Y (Thickness)', 30, 30);
+        vX = l; vY = t; vZ = w; // Dày hướng Y (đảo W và T)
     }
+
+    // Vẽ 3D Box chính xác
+    drawBox3D(cx, cy, vX, vY, vZ, `L=${L}`, `W=${W}`, `T=${T}`);
 }
 
 function drawAxis() {
@@ -231,7 +234,7 @@ function drawBox3D(cx, cy, d1, d2, d3, lbl1, lbl2, lbl3) {
 
     ctx.shadowColor = "rgba(108,92,231,0.15)"; ctx.shadowBlur = 20;
 
-    const mainColor = '#6c5ce7'; const lightColor = '#a29bfe'; const darkColor = '#4a3db8';
+    const mainColor = '#6c5ce7'; const lightColor = '#a29bfe';
 
     ctx.strokeStyle = mainColor; ctx.fillStyle = "rgba(108,92,231,0.08)";
     ctx.beginPath();
@@ -304,6 +307,7 @@ function speak(t) {
     window.speechSynthesis.speak(u);
 }
 
+// FIX QUAN TRỌNG: BẮT ĐÚNG TỌA ĐỘ Y VÀ Z
 function processFullVoiceNLP(t) {
     if (!t || t.trim().length < 2) return;
     
@@ -320,7 +324,7 @@ function processFullVoiceNLP(t) {
 
     const findVal = (keywords) => {
         for (let kw of keywords) {
-            // Cập nhật Regex để bắt linh hoạt hơn: dấu =, dấu :, chữ "bằng"
+            // Regex cực kỳ linh hoạt, bắt cả dấu cách hoặc dấu phẩy
             let regex = new RegExp(`${kw}(?:\\s+là|\\s+bằng|\\s*[:=]|\\s+)?\\s*(-?\\d+(?:[.,]\\d+)?)`, "i");
             let match = str.match(regex);
             if (match) return cleanNumberString(match[1]);
@@ -328,67 +332,61 @@ function processFullVoiceNLP(t) {
         return null;
     };
 
-    // Position - Lỗi Y, Z trước đây thường do thiếu dấu cách
+    // 1. POSITION - FIX LỖI Y VÀ Z
+    // Nếu dùng từ khóa rõ ràng
     let posX = findVal(["vị trí x", "pos x", "tọa độ x", "position x"]);
     let posY = findVal(["vị trí y", "pos y", "tọa độ y", "position y"]);
     let posZ = findVal(["vị trí z", "pos z", "tọa độ z", "position z"]);
+
+    // Fallback cho câu nói gộp: "Tọa độ x 10 y 20 z 30". Dùng regex để gán giá trị.
+    // Logic này đảm bảo lấy số đằng sau x, y, z kể cả khi không có chữ "vị trí"
+    const getCoord = (axis) => {
+        let regex = new RegExp(`(?:^|\\s|,)${axis}\\s*(-?\\d+(?:[.,]\\d+)?)`, "i");
+        let match = str.match(regex);
+        return match ? cleanNumberString(match[1]) : null;
+    };
+    
+    if(posX === null && str.includes('x')) posX = getCoord('x');
+    if(posY === null && str.includes('y')) posY = getCoord('y');
+    if(posZ === null && str.includes('z')) posZ = getCoord('z');
 
     if (posX !== null) { document.getElementById("px").value = posX; updatedCount++; }
     if (posY !== null) { document.getElementById("py").value = posY; updatedCount++; }
     if (posZ !== null) { document.getElementById("pz").value = posZ; updatedCount++; }
 
-    // Dimension - Đã đổi thành Thickness
+    // 2. DIMENSION
     let len = findVal(["chiều dài", "độ dài", "dài", "length"]);
     let wid = findVal(["chiều rộng", "độ rộng", "rộng", "width"]);
-    let hei = findVal(["chiều dày", "độ dày", "dày", "thickness", "chiều cao", "độ cao", "cao", "height"]); // Hỗ trợ cả từ cũ
+    let hei = findVal(["chiều dày", "độ dày", "dày", "thickness", "chiều cao", "độ cao", "cao", "height"]);
 
     if (len !== null) { document.getElementById("dx").value = len; updatedCount++; }
     if (wid !== null) { document.getElementById("dy").value = wid; updatedCount++; }
     if (hei !== null) { document.getElementById("dz").value = hei; updatedCount++; }
 
-    // Radius
-    let rad1 = findVal(["r1", "radius 1", "bo góc 1"]);
-    let rad2 = findVal(["r2", "radius 2", "bo góc 2"]);
-    let rad3 = findVal(["r3", "radius 3", "bo góc 3"]);
-    let rad4 = findVal(["r4", "radius 4", "bo góc 4"]);
+    // 3. RADIUS
     let radAll = findVal(["bo góc", "bán kính", "radius"]);
-
-    if (rad1 !== null) { document.getElementById("r1").value = rad1; updatedCount++; }
-    if (rad2 !== null) { document.getElementById("r2").value = rad2; updatedCount++; }
-    if (rad3 !== null) { document.getElementById("r3").value = rad3; updatedCount++; }
-    if (rad4 !== null) { document.getElementById("r4").value = rad4; updatedCount++; }
-    
-    if (radAll !== null && rad1 === null && rad2 === null && rad3 === null && rad4 === null) {
-        document.getElementById("r1").value = radAll; document.getElementById("r2").value = radAll;
-        document.getElementById("r3").value = radAll; document.getElementById("r4").value = radAll;
+    if (radAll !== null) {
+        document.getElementById("r1").value = radAll;
+        document.getElementById("r2").value = radAll;
+        document.getElementById("r3").value = radAll;
+        document.getElementById("r4").value = radAll;
         updatedCount++;
     }
 
-    // Orientation
-    if (str.match(/hướng\s*x/i)) { setOri('X'); updatedCount++; }
-    else if (str.match(/hướng\s*y/i)) { setOri('Y'); updatedCount++; }
-    else if (str.match(/hướng\s*z/i)) { setOri('Z'); updatedCount++; }
+    // 4. ORIENTATION
+    if (str.match(/hướng\s*x/i) || str.match(/ox\s*$/i)) { setOri('X'); updatedCount++; }
+    else if (str.match(/hướng\s*y/i) || str.match(/oy\s*$/i)) { setOri('Y'); updatedCount++; }
+    else if (str.match(/hướng\s*z/i) || str.match(/oz\s*$/i)) { setOri('Z'); updatedCount++; }
 
-    // Fallback
-    if (updatedCount === 0) {
-        let rawNums = str.match(/\d+([.,]\d+)?/g);
-        if (rawNums && rawNums.length >= 3) {
-            document.getElementById("dx").value = cleanNumberString(rawNums[0]);
-            document.getElementById("dy").value = cleanNumberString(rawNums[1]);
-            document.getElementById("dz").value = cleanNumberString(rawNums[2]);
-            updatedCount = 3;
-        }
-    }
-
+    // 5. ACTION
     if (updatedCount > 0) {
         draw();
         const msg = "✅ Đã cập nhật thông số thành công!";
         log("🤖 " + msg, 'assistant');
         speak(msg);
-
-        // **FIX: Tự động hiện hộp thoại lưu sau khi nói xong**
+        
+        // Tự động mở hộp thoại lưu sau khi nhận đủ dữ liệu
         autoSaveDialog();
-
     } else {
         const msg = "⚠️ Chưa nhận diện được thông số, vui lòng nói rõ hơn!";
         log("🤖 " + msg, 'assistant');
@@ -396,9 +394,9 @@ function processFullVoiceNLP(t) {
     }
 }
 
-// --- NEW LOGIC: AUTO SAVE DIALOG ---
+// --- LOGIC AUTO SAVE ---
 function autoSaveDialog() {
-    if (hasAutoTriggeredSave) return; // Chỉ trigger 1 lần
+    if (hasAutoTriggeredSave) return;
 
     let L = parseInputValue("dx");
     let W = parseInputValue("dy");
@@ -410,8 +408,8 @@ function autoSaveDialog() {
         if (modal) {
             modal.classList.add('active');
             document.body.style.overflow = 'hidden';
-            document.getElementById('saveFileName').value = `Opening_${L}x${W}x${T}`; // Tên gợi ý
-            log("📁 Hệ thống đã nhận đủ dữ liệu, đang mở hộp thoại lưu file...", 'system');
+            document.getElementById('saveFileName').value = `Opening_${L}x${W}x${T}`;
+            log("📁 Đã nhận đủ dữ liệu, đang mở hộp thoại lưu file...", 'system');
         }
     }
 }
@@ -431,7 +429,7 @@ function confirmSave() {
     closeSaveDialog();
 }
 
-// --- SAVE FILE LOGIC ---
+// --- SAVE LOGIC ---
 function saveFile() {
     const fileName = document.getElementById('saveFileName').value.trim() || "Opening";
     generateAndDownloadFile(fileName);
@@ -444,7 +442,7 @@ function generateAndDownloadFile(fileName) {
 
     let L = parseInputValue("dx");
     let W = parseInputValue("dy");
-    let H = parseInputValue("dz"); // Height = Thickness
+    let H = parseInputValue("dz"); // Thickness = Height in MAC
 
     let r1 = parseInputValue("r1"); let r2 = parseInputValue("r2");
     let r3 = parseInputValue("r3"); let r4 = parseInputValue("r4");
@@ -498,7 +496,7 @@ END`;
     let a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = `${fileName}.mac`;
-    document.body.appendChild(a); // Cần append vào DOM để một số trình duyệt hoạt động
+    document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(a.href);
@@ -524,7 +522,7 @@ function reset() {
     speak("Đã reset về mặc định");
 }
 
-// Help Modal Functions
+// Help & Modal Functions
 function help() {
     const modal = document.getElementById('helpModal');
     if (modal) {
@@ -542,7 +540,7 @@ function closeHelp() {
     }
 }
 
-// Close modals on overlay click
+// Modals Click Outside
 document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.modal-overlay').forEach(modal => {
         modal.addEventListener('click', function(e) {
@@ -561,10 +559,10 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
-// Input listeners
+// Input listeners realtime
 document.querySelectorAll("input").forEach(i => {
     i.addEventListener("input", () => {
-        hasAutoTriggeredSave = false; // Reset trigger nếu user chỉnh sửa tay
+        hasAutoTriggeredSave = false; // Reset trigger nếu edit tay
         draw();
     });
 });
@@ -574,5 +572,4 @@ window.addEventListener("resize", draw);
 // Auto-start draw
 draw();
 log("🚀 3D Opening Tool Pro ready", 'system');
-log("💡 Nhấn nút Voice và nói thông số", 'system');
-log("📝 Ví dụ: 'chiều dài 500, chiều rộng 300, chiều dày 200'", 'system');
+log("💡 Nhấn nút Voice và nói thông số (Ví dụ: Vị trí X 10 Y 20 Z 30)", 'system');
