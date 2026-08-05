@@ -83,7 +83,7 @@
                         </div>
                     </div>
                     <div class="input-field">
-                        <label>Thickness</label> <!-- Updated Label -->
+                        <label>Thickness</label>
                         <div class="input-wrapper">
                             <input id="dz" type="number" value="0" step="0.1">
                             <span class="unit">mm</span>
@@ -137,7 +137,7 @@
         <div class="action-bar">
             <button class="btn btn-primary" onclick="saveFile()">
                 <span class="btn-icon">💾</span>
-                Export <!-- Updated Text -->
+                Export
             </button>
             <button class="btn btn-voice" onclick="voice()" id="voiceBtn">
                 <span class="btn-icon">🎤</span>
@@ -214,7 +214,6 @@
                         <div class="voice-examples">
                             <span class="example-tag">"Chiều dài 500, rộng 300, dày 200"</span>
                             <span class="example-tag">"Vị trí X 100, Y 50, Z 0"</span>
-                            <span class="example-tag">"Bo góc 150"</span>
                             <span class="example-tag">"Hướng X"</span>
                         </div>
                     </div>
@@ -223,14 +222,7 @@
                     <div class="step-number">6</div>
                     <div class="step-content">
                         <h4>💾 Xuất file MAC</h4>
-                        <p>Nhấn <strong>Export</strong> để tạo file <code>Opening.mac</code> với tất cả thông số đã nhập.</p>
-                    </div>
-                </div>
-                <div class="help-step">
-                    <div class="step-number">7</div>
-                    <div class="step-content">
-                        <h4>↺ Reset</h4>
-                        <p>Nhấn <strong>Reset</strong> để đưa tất cả thông số về giá trị mặc định.</p>
+                        <p>Nhấn <strong>Export</strong> hoặc nói xong hệ thống sẽ tự động mở hộp thoại lưu file.</p>
                     </div>
                 </div>
             </div>
@@ -246,7 +238,7 @@
     </div>
 </div>
 
-<!-- Auto Save Dialog Modal (New) -->
+<!-- Auto Save Dialog Modal -->
 <div class="modal-overlay" id="saveModal">
     <div class="modal" style="max-width: 450px;">
         <div class="modal-header">
