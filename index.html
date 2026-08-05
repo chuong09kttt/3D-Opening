@@ -166,6 +166,86 @@
     </div>
 </div>
 
+<!-- Help Modal -->
+<div class="modal-overlay" id="helpModal">
+    <div class="modal">
+        <div class="modal-header">
+            <div class="modal-title">
+                <span class="modal-icon">📖</span>
+                <h2>Hướng Dẫn Sử Dụng</h2>
+            </div>
+            <button class="modal-close" onclick="closeHelp()">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="help-section">
+                <div class="help-step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h4>📐 Nhập thông số kích thước</h4>
+                        <p>Nhập các giá trị <strong>Length (Dài)</strong>, <strong>Width (Rộng)</strong>, <strong>Height (Cao)</strong> vào các ô tương ứng. Model 3D sẽ tự động cập nhật.</p>
+                    </div>
+                </div>
+                <div class="help-step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h4>📍 Thiết lập vị trí</h4>
+                        <p>Điều chỉnh tọa độ <strong>X, Y, Z</strong> để định vị Opening trong không gian 3D.</p>
+                    </div>
+                </div>
+                <div class="help-step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h4>⭕ Bo góc (Corner Radius)</h4>
+                        <p>Nhập bán kính bo góc cho từng góc <strong>R1, R2, R3, R4</strong>. Giá trị mặc định là 150mm.</p>
+                    </div>
+                </div>
+                <div class="help-step">
+                    <div class="step-number">4</div>
+                    <div class="step-content">
+                        <h4>🔄 Chọn hướng (Orientation)</h4>
+                        <p>Chọn trục chính cho Opening: <strong>X, Y, hoặc Z</strong>. Model sẽ xoay tương ứng.</p>
+                    </div>
+                </div>
+                <div class="help-step">
+                    <div class="step-number">5</div>
+                    <div class="step-content">
+                        <h4>🎤 Sử dụng Voice Command</h4>
+                        <p>Nhấn nút <strong>🎤 Voice</strong> và nói các thông số. Ví dụ:</p>
+                        <div class="voice-examples">
+                            <span class="example-tag">"Chiều dài 500, rộng 300, cao 200"</span>
+                            <span class="example-tag">"Vị trí X 100, Y 50, Z 0"</span>
+                            <span class="example-tag">"Bo góc 150"</span>
+                            <span class="example-tag">"Hướng Z"</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="help-step">
+                    <div class="step-number">6</div>
+                    <div class="step-content">
+                        <h4>💾 Xuất file MAC</h4>
+                        <p>Nhấn <strong>Export MAC</strong> để tạo file <code>Opening.mac</code> với tất cả thông số đã nhập.</p>
+                    </div>
+                </div>
+                <div class="help-step">
+                    <div class="step-number">7</div>
+                    <div class="step-content">
+                        <h4>↺ Reset</h4>
+                        <p>Nhấn <strong>Reset</strong> để đưa tất cả thông số về giá trị mặc định.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="help-footer">
+                <div class="help-tip">
+                    💡 <strong>Mẹo:</strong> Bạn có thể nhập số với dấu phân cách hàng nghìn (ví dụ: 1.500 hoặc 1,500) và hệ thống sẽ tự động xử lý.
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-primary" onclick="closeHelp()">Đã hiểu ✓</button>
+        </div>
+    </div>
+</div>
+
 <script src="script.js"></script>
 </body>
 </html>
