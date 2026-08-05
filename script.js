@@ -364,12 +364,24 @@ function drawBox3D(cx, cy, d1, d2, d3, lbl1, lbl2, lbl3) {
         ctx.shadowColor = "rgba(0,0,0,0.5)";
         ctx.shadowBlur = 10;
         ctx.beginPath();
-        ctx.roundRect(rx, ry, width, height, 6);
+        // Sử dụng arc thay vì roundRect để tương thích tốt hơn
+        const radius = 6;
+        ctx.moveTo(rx + radius, ry);
+        ctx.lineTo(rx + width - radius, ry);
+        ctx.quadraticCurveTo(rx + width, ry, rx + width, ry + radius);
+        ctx.lineTo(rx + width, ry + height - radius);
+        ctx.quadraticCurveTo(rx + width, ry + height, rx + width - radius, ry + height);
+        ctx.lineTo(rx + radius, ry + height);
+        ctx.quadraticCurveTo(rx, ry + height, rx, ry + height - radius);
+        ctx.lineTo(rx, ry + radius);
+        ctx.quadraticCurveTo(rx, ry, rx + radius, ry);
+        ctx.closePath();
         ctx.fill();
         ctx.shadowBlur = 0;
         ctx.fillStyle = "rgba(255,255,255,0.9)";
         ctx.textAlign = align;
-        ctx.fillText(text, x, y + 4);
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, x, y + 1);
     };
 
     drawLabel(lbl1, c1.x, c1.y + 18);
@@ -377,26 +389,9 @@ function drawBox3D(cx, cy, d1, d2, d3, lbl1, lbl2, lbl3) {
     drawLabel(lbl3, c3.x - 55, c3.y + 4);
 }
 
-// roundRect polyfill for canvas
-if (!CanvasRenderingContext2D.prototype.roundRect) {
-    CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
-        if (r > w/2) r = w/2;
-        if (r > h/2) r = h/2;
-        this.moveTo(x + r, y);
-        this.lineTo(x + w - r, y);
-        this.quadraticCurveTo(x + w, y, x + w, y + r);
-        this.lineTo(x + w, y + h - r);
-        this.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-        this.lineTo(x + r, y + h);
-        this.quadraticCurveTo(x, y + h, x, y + h - r);
-        this.lineTo(x, y + r);
-        this.quadraticCurveTo(x, y, x + r, y);
-        return this;
-    };
-}
-
 function log(t, type = 'user') {
     const chatBox = document.getElementById("chat");
+    if (!chatBox) return;
     const className = type === 'user' ? 'user' : type === 'assistant' ? 'assistant' : 'system';
     chatBox.innerHTML += `<div class="${className}">${t}</div>`;
     chatBox.scrollTop = chatBox.scrollHeight;
@@ -607,34 +602,33 @@ function reset() {
     speak("Đã reset về mặc định");
 }
 
-
-
-// Input listeners
-document.querySelectorAll("input").forEach(i => {
-    i.addEventListener("input", draw);
-});
-
-window.addEventListener("resize", draw);
-
-
 // Help Modal Functions
 function help() {
     const modal = document.getElementById('helpModal');
-    modal.classList.add('active');
-    document.body.style.overflow = 'hidden';
-    log("📖 Đã mở hướng dẫn sử dụng", 'system');
+    if (modal) {
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+        log("📖 Đã mở hướng dẫn sử dụng", 'system');
+    }
 }
 
 function closeHelp() {
     const modal = document.getElementById('helpModal');
-    modal.classList.remove('active');
-    document.body.style.overflow = '';
+    if (modal) {
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+    }
 }
 
-// Close modal on overlay click
-document.getElementById('helpModal').addEventListener('click', function(e) {
-    if (e.target === this) {
-        closeHelp();
+// Close modal on overlay click - Cần đảm bảo modal đã tồn tại
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('helpModal');
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeHelp();
+            }
+        });
     }
 });
 
@@ -645,14 +639,15 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
+// Input listeners
+document.querySelectorAll("input").forEach(i => {
+    i.addEventListener("input", draw);
+});
 
+window.addEventListener("resize", draw);
 
 // Auto-start draw
 draw();
 log("🚀 3D Opening Tool Pro ready", 'system');
 log("💡 Nhấn nút Voice và nói thông số", 'system');
 log("📝 Ví dụ: 'chiều dài 500, chiều rộng 300, chiều cao 200'", 'system');
-
-
-// Thêm vào cuối file script.js
-
