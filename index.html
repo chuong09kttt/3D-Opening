@@ -28,15 +28,94 @@
     </div>
 
     <div class="panel">
-        <!-- Control Grid -->
-        <div class="control-grid">
-            <!-- Position -->
+        <!-- Vertical Layout Column -->
+        <div class="control-column">
+            
+            <!-- 1. DIMENSION -->
+            <div class="control-group">
+                <div class="group-header">
+                    <span class="icon">📐</span>
+                    <h3>Dimension</h3>
+                </div>
+                <div class="input-grid three-col">
+                    <div class="input-field">
+                        <label>Length</label>
+                        <div class="input-wrapper">
+                            <input id="dx" type="number" value="0" step="0.1">
+                            <span class="unit">mm</span>
+                        </div>
+                    </div>
+                    <div class="input-field">
+                        <label>Width</label>
+                        <div class="input-wrapper">
+                            <input id="dy" type="number" value="0" step="0.1">
+                            <span class="unit">mm</span>
+                        </div>
+                    </div>
+                    <div class="input-field">
+                        <label>Thickness</label>
+                        <div class="input-wrapper">
+                            <input id="dz" type="number" value="0" step="0.1">
+                            <span class="unit">mm</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. ORIENTATION -->
+            <div class="control-group orientation-row-group">
+                <div class="group-header">
+                    <span class="icon">🔄</span>
+                    <h3>Orientation</h3>
+                </div>
+                <div class="ori-buttons">
+                    <button onclick="setOri('X')" id="ox">X</button>
+                    <button onclick="setOri('Y')" id="oy">Y</button>
+                    <button onclick="setOri('Z')" id="oz" class="active">Z</button>
+                </div>
+            </div>
+
+            <!-- 3. CORNER RADIUS -->
+            <div class="control-group">
+                <div class="group-header">
+                    <span class="icon">⭕</span>
+                    <h3>Corner Radius</h3>
+                </div>
+                <div class="input-grid four-col">
+                    <div class="input-field radius-field">
+                        <label>R1</label>
+                        <div class="input-wrapper">
+                            <input id="r1" type="number" value="150" step="0.1">
+                        </div>
+                    </div>
+                    <div class="input-field radius-field">
+                        <label>R2</label>
+                        <div class="input-wrapper">
+                            <input id="r2" type="number" value="150" step="0.1">
+                        </div>
+                    </div>
+                    <div class="input-field radius-field">
+                        <label>R3</label>
+                        <div class="input-wrapper">
+                            <input id="r3" type="number" value="150" step="0.1">
+                        </div>
+                    </div>
+                    <div class="input-field radius-field">
+                        <label>R4</label>
+                        <div class="input-wrapper">
+                            <input id="r4" type="number" value="150" step="0.1">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. POSITION -->
             <div class="control-group">
                 <div class="group-header">
                     <span class="icon">📍</span>
                     <h3>Position</h3>
                 </div>
-                <div class="input-grid">
+                <div class="input-grid three-col">
                     <div class="input-field">
                         <label>X</label>
                         <div class="input-wrapper">
@@ -61,76 +140,6 @@
                 </div>
             </div>
 
-            <!-- Dimension -->
-            <div class="control-group">
-                <div class="group-header">
-                    <span class="icon">📐</span>
-                    <h3>Dimension</h3>
-                </div>
-                <div class="input-grid">
-                    <div class="input-field">
-                        <label>Length</label>
-                        <div class="input-wrapper">
-                            <input id="dx" type="number" value="0" step="0.1">
-                            <span class="unit">mm</span>
-                        </div>
-                    </div>
-                    <div class="input-field">
-                        <label>Width</label>
-                        <div class="input-wrapper">
-                            <input id="dy" type="number" value="0" step="0.1">
-                            <span class="unit">mm</span>
-                        </div>
-                    </div>
-                    <div class="input-field">
-                        <label>Thickness</label>
-                        <div class="input-wrapper">
-                            <input id="dz" type="number" value="0" step="0.1">
-                            <span class="unit">mm</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Radius & Orientation -->
-        <div class="control-row">
-            <div class="control-group radius-group">
-                <div class="group-header">
-                    <span class="icon">⭕</span>
-                    <h3>Corner Radius</h3>
-                </div>
-                <div class="radius-grid">
-                    <div class="radius-field">
-                        <label>R1</label>
-                        <input id="r1" type="number" value="150" step="0.1">
-                    </div>
-                    <div class="radius-field">
-                        <label>R2</label>
-                        <input id="r2" type="number" value="150" step="0.1">
-                    </div>
-                    <div class="radius-field">
-                        <label>R3</label>
-                        <input id="r3" type="number" value="150" step="0.1">
-                    </div>
-                    <div class="radius-field">
-                        <label>R4</label>
-                        <input id="r4" type="number" value="150" step="0.1">
-                    </div>
-                </div>
-            </div>
-
-            <div class="control-group orientation-group">
-                <div class="group-header">
-                    <span class="icon">🔄</span>
-                    <h3>Orientation</h3>
-                </div>
-                <div class="ori-buttons">
-                    <button onclick="setOri('X')" id="ox">X</button>
-                    <button onclick="setOri('Y')" id="oy">Y</button>
-                    <button onclick="setOri('Z')" id="oz" class="active">Z</button>
-                </div>
-            </div>
         </div>
 
         <!-- Action Buttons -->
@@ -210,12 +219,7 @@
                     <div class="step-number">5</div>
                     <div class="step-content">
                         <h4>🎤 Sử dụng Voice Command</h4>
-                        <p>Nhấn nút <strong>🎤 Voice</strong> và nói các thông số. Ví dụ:</p>
-                        <div class="voice-examples">
-                            <span class="example-tag">"Chiều dài 500, rộng 300, dày 200"</span>
-                            <span class="example-tag">"Vị trí X 100, Y 50, Z 0"</span>
-                            <span class="example-tag">"Hướng X"</span>
-                        </div>
+                        <p>Nhấn nút <strong>🎤 Voice</strong> và nói các thông số.</p>
                     </div>
                 </div>
                 <div class="help-step">
@@ -224,11 +228,6 @@
                         <h4>💾 Xuất file MAC</h4>
                         <p>Nhấn <strong>Export</strong> hoặc nói xong hệ thống sẽ tự động mở hộp thoại lưu file.</p>
                     </div>
-                </div>
-            </div>
-            <div class="help-footer">
-                <div class="help-tip">
-                    💡 <strong>Mẹo:</strong> Bạn có thể nhập số với dấu phân cách hàng nghìn (ví dụ: 1.500 hoặc 1,500) và hệ thống sẽ tự động xử lý.
                 </div>
             </div>
         </div>
