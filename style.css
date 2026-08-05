@@ -566,3 +566,255 @@ input[type=number] {
         min-width: unset;
     }
 }
+
+/* Thêm vào cuối file style.css */
+
+/* Help Modal */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    padding: 20px;
+    animation: fadeIn 0.3s ease;
+}
+
+.modal-overlay.active {
+    display: flex;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.modal {
+    background: linear-gradient(165deg, rgba(20, 27, 43, 0.98) 0%, rgba(10, 14, 23, 0.99) 100%);
+    border-radius: 24px;
+    border: 1px solid rgba(255,255,255,0.08);
+    max-width: 700px;
+    width: 100%;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 40px 80px rgba(0,0,0,0.6);
+    overflow: hidden;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 28px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    background: rgba(0,0,0,0.2);
+}
+
+.modal-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.modal-title .modal-icon {
+    font-size: 24px;
+}
+
+.modal-title h2 {
+    font-size: 20px;
+    font-weight: 800;
+    color: #ffffff;
+    margin: 0;
+    letter-spacing: -0.5px;
+}
+
+.modal-close {
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.05);
+    color: rgba(255,255,255,0.5);
+    font-size: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-close:hover {
+    background: rgba(255,255,255,0.1);
+    color: #ffffff;
+    transform: rotate(90deg);
+}
+
+.modal-body {
+    padding: 24px 28px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.help-section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.help-step {
+    display: flex;
+    gap: 16px;
+    padding: 16px 20px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,0.04);
+    transition: all 0.3s ease;
+}
+
+.help-step:hover {
+    background: rgba(255,255,255,0.06);
+    border-color: rgba(108, 92, 231, 0.2);
+}
+
+.step-number {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 16px;
+    box-shadow: 0 4px 15px rgba(108, 92, 231, 0.3);
+}
+
+.step-content {
+    flex: 1;
+}
+
+.step-content h4 {
+    font-size: 15px;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0 0 4px 0;
+}
+
+.step-content p {
+    font-size: 14px;
+    color: rgba(255,255,255,0.6);
+    line-height: 1.6;
+    margin: 0;
+}
+
+.step-content code {
+    background: rgba(255,255,255,0.08);
+    padding: 2px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #a29bfe;
+    font-family: 'Inter', monospace;
+}
+
+.voice-examples {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.example-tag {
+    background: rgba(108, 92, 231, 0.15);
+    border: 1px solid rgba(108, 92, 231, 0.2);
+    color: #a29bfe;
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.help-footer {
+    margin-top: 20px;
+    padding: 16px 20px;
+    background: rgba(0, 210, 211, 0.06);
+    border: 1px solid rgba(0, 210, 211, 0.1);
+    border-radius: 14px;
+}
+
+.help-tip {
+    font-size: 14px;
+    color: rgba(255,255,255,0.7);
+    line-height: 1.6;
+}
+
+.help-tip strong {
+    color: #00d2d3;
+}
+
+.modal-footer {
+    padding: 16px 28px 20px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    display: flex;
+    justify-content: flex-end;
+}
+
+.modal-footer .btn {
+    flex: none;
+    padding: 0 40px;
+    height: 44px;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+    .modal {
+        max-height: 95vh;
+        border-radius: 16px;
+    }
+    .modal-header {
+        padding: 16px 20px;
+    }
+    .modal-body {
+        padding: 16px 20px;
+    }
+    .modal-footer {
+        padding: 12px 20px 16px;
+    }
+    .help-step {
+        padding: 12px 16px;
+        gap: 12px;
+    }
+    .step-number {
+        width: 30px;
+        height: 30px;
+        font-size: 14px;
+    }
+    .step-content h4 {
+        font-size: 14px;
+    }
+    .step-content p {
+        font-size: 13px;
+    }
+    .modal-title h2 {
+        font-size: 17px;
+    }
+    .voice-examples {
+        flex-direction: column;
+    }
+    .example-tag {
+        width: 100%;
+        text-align: center;
+    }
+}
