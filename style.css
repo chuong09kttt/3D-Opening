@@ -19,7 +19,7 @@ body {
 ::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 10px; }
 ::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #6c5ce7, #a29bfe); border-radius: 10px; }
 
-.app { width: 1100px; max-width: 100%; margin: 0 auto; }
+.app { width: 800px; max-width: 100%; margin: 0 auto; } /* Thu nhỏ width chung để vừa vặn hơn */
 
 /* Canvas Wrapper */
 .canvas-wrapper {
@@ -52,56 +52,53 @@ body {
 
 .fps-display { color: rgba(255,255,255,0.3); font-size: 11px; font-weight: 600; letter-spacing: 0.5px; }
 
-#view { width: 100%; height: 320px; display: block; background: transparent; }
+#view { width: 100%; height: 300px; display: block; background: transparent; } /* Giảm chiều cao canvas chút để gọn */
 
 .canvas-overlay { position: absolute; bottom: 16px; right: 16px; }
 
 .orientation-badge {
     background: rgba(108, 92, 231, 0.25); backdrop-filter: blur(10px);
     border: 1px solid rgba(108, 92, 231, 0.3); color: #a29bfe;
-    font-weight: 800; font-size: 20px; padding: 8px 18px; border-radius: 12px; letter-spacing: 1px;
+    font-weight: 800; font-size: 18px; padding: 6px 16px; border-radius: 12px; letter-spacing: 1px;
     box-shadow: 0 4px 20px rgba(108, 92, 231, 0.2);
 }
 
-/* Panel */
+/* Panel & Layout 1 Cột Dọc */
 .panel {
     margin-top: 20px; background: linear-gradient(165deg, rgba(20, 27, 43, 0.95) 0%, rgba(10, 14, 23, 0.98) 100%);
     border-radius: 20px; padding: 24px 28px;
     border: 1px solid rgba(255,255,255,0.06); box-shadow: 0 20px 60px rgba(0,0,0,0.4); backdrop-filter: blur(30px);
 }
 
-/* Control Grid */
-.control-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-bottom: 20px; }
+.control-column { display: flex; flex-direction: column; gap: 16px; }
+
 .control-group { background: rgba(255,255,255,0.03); border-radius: 16px; padding: 16px 20px; border: 1px solid rgba(255,255,255,0.04); transition: all 0.3s ease; }
-.control-group:hover { border-color: rgba(108, 92, 231, 0.2); }
-.group-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.control-group:hover { border-color: rgba(108, 92, 231, 0.15); }
+.group-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
 .group-header .icon { font-size: 18px; }
 .group-header h3 { font-size: 14px; font-weight: 700; color: #b8c7e6; letter-spacing: 0.5px; text-transform: uppercase; margin: 0; }
 
-.input-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+/* Input Grid Styles */
+.input-grid { display: grid; gap: 12px; }
+.input-grid.three-col { grid-template-columns: repeat(3, 1fr); }
+.input-grid.four-col { grid-template-columns: repeat(4, 1fr); }
+
 .input-field { display: flex; flex-direction: column; gap: 4px; }
 .input-field label { font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.5px; }
 .input-wrapper { position: relative; display: flex; align-items: center; }
 
-/* FIX: CẢI THIỆN GIAO DIỆN CÁC Ô TEXTBOX */
 .input-wrapper input, .radius-field input {
-    width: 100%; height: 42px;
-    background: rgba(255, 255, 255, 0.08); /* Sáng hơn chút */
-    border: 1px solid rgba(255, 255, 255, 0.15); /* Viền rõ hơn */
+    width: 100%; height: 40px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 10px;
-    color: #ffffff; font-size: 15px; font-weight: 600;
-    padding: 0 40px 0 14px; outline: none;
+    color: #ffffff; font-size: 14px; font-weight: 600;
+    padding: 0 36px 0 12px; outline: none;
     transition: all 0.3s ease; font-family: 'Inter', sans-serif;
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.2); /* Bóng đổ bên trong để tạo chiều sâu */
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
 }
-
-.input-wrapper input:focus, .radius-field input:focus {
-    border-color: #6c5ce7; /* Viền tím neon khi focus */
-    box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.25), inset 0 2px 4px rgba(0,0,0,0.1);
-    background: rgba(255, 255, 255, 0.12);
-}
-
-.input-wrapper input:hover, .radius-field input:hover { border-color: rgba(255,255,255,0.3); }
+.input-wrapper input:focus { border-color: #6c5ce7; box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.25); background: rgba(255, 255, 255, 0.12); }
+.input-wrapper input:hover { border-color: rgba(255,255,255,0.3); }
 
 .input-wrapper .unit {
     position: absolute; right: 12px;
@@ -112,13 +109,9 @@ body {
 input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none !important; margin: 0 !important; }
 input[type=number] { -moz-appearance: textfield !important; appearance: textfield !important; }
 
-/* Control Row */
-.control-row { display: grid; grid-template-columns: 2fr 1fr; gap: 28px; margin-bottom: 20px; }
-.radius-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; }
-.radius-field { display: flex; flex-direction: column; gap: 4px; }
-.radius-field label { font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.5px; }
-
-.ori-buttons { display: flex; gap: 10px; height: 42px; }
+/* Orientation Buttons */
+.orientation-row-group { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; }
+.ori-buttons { display: flex; gap: 10px; height: 38px; flex: 0 0 55%; }
 .ori-buttons button {
     flex: 1; border: none; border-radius: 10px;
     background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.5);
@@ -136,17 +129,17 @@ input[type=number] { -moz-appearance: textfield !important; appearance: textfiel
 .ori-buttons button span { position: relative; z-index: 1; }
 
 /* Action Bar */
-.action-bar { display: flex; gap: 12px; margin-bottom: 16px; }
+.action-bar { display: flex; gap: 12px; margin-top: 20px; margin-bottom: 16px; }
 .btn {
-    flex: 1; height: 48px; border: none; border-radius: 12px;
-    font-family: 'Inter', sans-serif; font-weight: 700; font-size: 14px;
+    flex: 1; height: 44px; border: none; border-radius: 12px;
+    font-family: 'Inter', sans-serif; font-weight: 700; font-size: 13px;
     color: #ffffff; cursor: pointer; transition: all 0.3s ease;
     display: flex; align-items: center; justify-content: center; gap: 8px; position: relative; overflow: hidden;
 }
 .btn::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(255,255,255,0.1) 0%, transparent 100%); opacity: 0; transition: opacity 0.3s ease; }
 .btn:hover::after { opacity: 1; }
 .btn:active { transform: scale(0.96); }
-.btn .btn-icon { font-size: 18px; }
+.btn .btn-icon { font-size: 16px; }
 
 .btn-primary { background: linear-gradient(135deg, #6c5ce7, #a29bfe); box-shadow: 0 4px 20px rgba(108, 92, 231, 0.3); }
 .btn-primary:hover { box-shadow: 0 6px 30px rgba(108, 92, 231, 0.4); transform: translateY(-2px); }
@@ -193,20 +186,27 @@ input[type=number] { -moz-appearance: textfield !important; appearance: textfiel
 .modal-body { padding: 24px 28px; overflow-y: auto; flex: 1; }
 .modal-footer { padding: 16px 28px 20px; border-top: 1px solid rgba(255,255,255,0.06); display: flex; justify-content: flex-end; gap: 12px; }
 
-/* Responsive */
-@media (max-width: 900px) {
-    .control-grid { grid-template-columns: 1fr; gap: 16px; }
-    .control-row { grid-template-columns: 1fr; gap: 16px; }
-    .action-bar { flex-wrap: wrap; }
-    .btn { flex: 1 1 calc(50% - 6px); min-width: 120px; }
-    .panel { padding: 16px; }
-    .input-grid { grid-template-columns: 1fr 1fr; }
-    .radius-grid { grid-template-columns: 1fr 1fr; }
-}
-@media (max-width: 600px) {
+/* Responsive ưu tiên Mobile */
+@media (max-width: 768px) {
     body { padding: 10px; }
-    .input-grid { grid-template-columns: 1fr; }
-    .radius-grid { grid-template-columns: 1fr 1fr; }
+    .app { width: 100%; }
+    .panel { padding: 16px; }
+    
+    .input-grid.three-col { grid-template-columns: 1fr; }
+    .input-grid.four-col { grid-template-columns: 1fr 1fr; }
+    
+    .orientation-row-group { flex-direction: column; align-items: stretch; gap: 12px; }
+    .ori-buttons { flex: none; height: 40px; }
+    
+    .action-bar { flex-wrap: wrap; gap: 8px; }
+    .btn { flex: 1 1 calc(50% - 4px); height: 42px; font-size: 12px; }
     #view { height: 220px; }
-    .btn { flex: 1 1 100%; min-width: unset; }
+    .modal { max-height: 95vh; border-radius: 16px; }
+    .modal-header, .modal-body { padding: 16px 20px; }
+}
+
+@media (max-width: 480px) {
+    .canvas-header { flex-direction: column; gap: 4px; padding: 8px 16px; }
+    .input-grid.four-col { grid-template-columns: 1fr 1fr; }
+    .btn { flex: 1 1 100%; }
 }
