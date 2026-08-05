@@ -122,7 +122,7 @@ function setOri(o) {
     document.querySelectorAll(".ori-buttons button").forEach(b => b.classList.remove("active"));
     document.getElementById("o" + o.toLowerCase()).classList.add("active");
     document.getElementById('oriBadge').textContent = o;
-    draw(); // Update 3D immediately
+    draw(); 
 }
 
 function parseInputValue(id) {
@@ -136,14 +136,14 @@ function parseInputValue(id) {
     return parseFloat(raw) || 0;
 }
 
-// Logic 3D xoay chuẩn xác dựa trên trục tọa độ
+// Logic 3D
 function draw() {
     c.width = c.offsetWidth;
     c.height = c.offsetHeight || 320;
 
     let L = parseInputValue("dx");
     let W = parseInputValue("dy");
-    let T = parseInputValue("dz"); // Thickness
+    let T = parseInputValue("dz"); 
 
     let posX = parseInputValue("px");
     let posY = parseInputValue("py");
@@ -168,25 +168,18 @@ function draw() {
     let w = W * scale;
     let t = T * scale; 
 
-    // Tịnh tiến tâm model ra giữa màn hình + cộng thêm vị trí người dùng nhập (PosX, PosY, PosZ) đã được scale
     let cx = c.width / 2 - 20 + (posX * scale);
-    let cy = c.height / 2 + 30 - (posZ * scale); // Trục Z trong 3D tương ứng chiều âm của Y trên Canvas
+    let cy = c.height / 2 + 30 - (posZ * scale);
 
-    // --- ORIENTATION LOGIC (Projection) ---
-    // Chiều dài (Length) luôn nằm theo phương X (Trục hoành).
-    // Chiều Rộng (Width) luôn nằm ở chiều sâu.
-    // Chiều Dày (Thickness) sẽ thay đổi hướng dựa trên Orientation.
-    let vX, vY, vZ; // kích thước 3 cạnh theo không gian 3D
-    
+    let vX, vY, vZ;
     if (ORI === "Z") {
-        vX = l; vY = w; vZ = t; // Dày hướng Z
+        vX = l; vY = w; vZ = t; 
     } else if (ORI === "X") {
-        vX = t; vY = w; vZ = l; // Dày hướng X (đảo L và T)
+        vX = t; vY = w; vZ = l; 
     } else if (ORI === "Y") {
-        vX = l; vY = t; vZ = w; // Dày hướng Y (đảo W và T)
+        vX = l; vY = t; vZ = w; 
     }
 
-    // Vẽ 3D Box chính xác
     drawBox3D(cx, cy, vX, vY, vZ, `L=${L}`, `W=${W}`, `T=${T}`);
 }
 
@@ -307,7 +300,7 @@ function speak(t) {
     window.speechSynthesis.speak(u);
 }
 
-// FIX QUAN TRỌNG: BẮT ĐÚNG TỌA ĐỘ Y VÀ Z
+// --- FIX QUAN TRỌNG: XỬ LÝ NHẬN DIỆN ĐỘ DÀY VÀ VỊ TRÍ Y, Z ---
 function processFullVoiceNLP(t) {
     if (!t || t.trim().length < 2) return;
     
@@ -324,22 +317,35 @@ function processFullVoiceNLP(t) {
 
     const findVal = (keywords) => {
         for (let kw of keywords) {
-            // Regex cực kỳ linh hoạt, bắt cả dấu cách hoặc dấu phẩy
-            let regex = new RegExp(`${kw}(?:\\s+là|\\s+bằng|\\s*[:=]|\\s+)?\\s*(-?\\d+(?:[.,]\\d+)?)`, "i");
+            // Sử dụng \b (word boundary) để tránh lỗi "dài" bị trùng với "dày" trong regex
+            let regex = new RegExp(`\\b${kw}\\b(?:\\s+là|\\s+bằng|\\s*[:=]|\\s+)?\\s*(-?\\d+(?:[.,]\\d+)?)`, "i");
             let match = str.match(regex);
             if (match) return cleanNumberString(match[1]);
         }
         return null;
     };
 
-    // 1. POSITION - FIX LỖI Y VÀ Z
-    // Nếu dùng từ khóa rõ ràng
+    // 1. DIMENSION (Phân biệt "chiều dài" và "chiều dày" rõ ràng)
+    // Ưu tiên cụm từ 2 từ trước để không bị trùng.
+    let len = findVal(["chiều dài", "độ dài", "length"]);
+    let wid = findVal(["chiều rộng", "độ rộng", "width"]);
+    let hei = findVal(["chiều dày", "độ dày", "thickness"]); 
+
+    // Fallback cho "dài", "rộng", "dày" nếu câu nói ngắn gọn
+    if (len === null) len = findVal(["dài"]);
+    if (wid === null) wid = findVal(["rộng"]);
+    if (hei === null) hei = findVal(["dày", "chiều cao", "cao", "height"]);
+
+    if (len !== null) { document.getElementById("dx").value = len; updatedCount++; }
+    if (wid !== null) { document.getElementById("dy").value = wid; updatedCount++; }
+    if (hei !== null) { document.getElementById("dz").value = hei; updatedCount++; }
+
+    // 2. POSITION (Bắt đúng Y, Z)
     let posX = findVal(["vị trí x", "pos x", "tọa độ x", "position x"]);
     let posY = findVal(["vị trí y", "pos y", "tọa độ y", "position y"]);
     let posZ = findVal(["vị trí z", "pos z", "tọa độ z", "position z"]);
 
-    // Fallback cho câu nói gộp: "Tọa độ x 10 y 20 z 30". Dùng regex để gán giá trị.
-    // Logic này đảm bảo lấy số đằng sau x, y, z kể cả khi không có chữ "vị trí"
+    // Fallback cho "x 10 y 20 z 30" nếu câu nói không có chữ "vị trí"
     const getCoord = (axis) => {
         let regex = new RegExp(`(?:^|\\s|,)${axis}\\s*(-?\\d+(?:[.,]\\d+)?)`, "i");
         let match = str.match(regex);
@@ -353,15 +359,6 @@ function processFullVoiceNLP(t) {
     if (posX !== null) { document.getElementById("px").value = posX; updatedCount++; }
     if (posY !== null) { document.getElementById("py").value = posY; updatedCount++; }
     if (posZ !== null) { document.getElementById("pz").value = posZ; updatedCount++; }
-
-    // 2. DIMENSION
-    let len = findVal(["chiều dài", "độ dài", "dài", "length"]);
-    let wid = findVal(["chiều rộng", "độ rộng", "rộng", "width"]);
-    let hei = findVal(["chiều dày", "độ dày", "dày", "thickness", "chiều cao", "độ cao", "cao", "height"]);
-
-    if (len !== null) { document.getElementById("dx").value = len; updatedCount++; }
-    if (wid !== null) { document.getElementById("dy").value = wid; updatedCount++; }
-    if (hei !== null) { document.getElementById("dz").value = hei; updatedCount++; }
 
     // 3. RADIUS
     let radAll = findVal(["bo góc", "bán kính", "radius"]);
@@ -378,7 +375,7 @@ function processFullVoiceNLP(t) {
     else if (str.match(/hướng\s*y/i) || str.match(/oy\s*$/i)) { setOri('Y'); updatedCount++; }
     else if (str.match(/hướng\s*z/i) || str.match(/oz\s*$/i)) { setOri('Z'); updatedCount++; }
 
-    // 5. ACTION
+    // 5. ACTION & FINALIZE
     if (updatedCount > 0) {
         draw();
         const msg = "✅ Đã cập nhật thông số thành công!";
@@ -388,9 +385,21 @@ function processFullVoiceNLP(t) {
         // Tự động mở hộp thoại lưu sau khi nhận đủ dữ liệu
         autoSaveDialog();
     } else {
-        const msg = "⚠️ Chưa nhận diện được thông số, vui lòng nói rõ hơn!";
-        log("🤖 " + msg, 'assistant');
-        speak(msg);
+        // Fallback cuối cùng: Nếu không khớp từ khóa nào, thử bắt 3 số liên tiếp trong câu
+        let rawNums = str.match(/\d+([.,]\d+)?/g);
+        if (rawNums && rawNums.length >= 3) {
+            document.getElementById("dx").value = cleanNumberString(rawNums[0]);
+            document.getElementById("dy").value = cleanNumberString(rawNums[1]);
+            document.getElementById("dz").value = cleanNumberString(rawNums[2]);
+            updatedCount = 3;
+            draw();
+            log("🤖 Đã nhận dạng số liệu theo thứ tự (Dài, Rộng, Dày)", 'assistant');
+            autoSaveDialog();
+        } else {
+            const msg = "⚠️ Chưa nhận diện được thông số, vui lòng nói rõ hơn!";
+            log("🤖 " + msg, 'assistant');
+            speak(msg);
+        }
     }
 }
 
@@ -562,7 +571,7 @@ document.addEventListener('keydown', function(e) {
 // Input listeners realtime
 document.querySelectorAll("input").forEach(i => {
     i.addEventListener("input", () => {
-        hasAutoTriggeredSave = false; // Reset trigger nếu edit tay
+        hasAutoTriggeredSave = false; 
         draw();
     });
 });
@@ -572,4 +581,4 @@ window.addEventListener("resize", draw);
 // Auto-start draw
 draw();
 log("🚀 3D Opening Tool Pro ready", 'system');
-log("💡 Nhấn nút Voice và nói thông số (Ví dụ: Vị trí X 10 Y 20 Z 30)", 'system');
+log("💡 Nhấn nút Voice và nói (VD: chiều dài 2000, chiều rộng 5000, chiều dày 300)", 'system');
