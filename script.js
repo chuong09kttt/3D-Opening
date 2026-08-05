@@ -624,3 +624,34 @@ draw();
 log("🚀 3D Opening Tool Pro ready", 'system');
 log("💡 Nhấn nút Voice và nói thông số", 'system');
 log("📝 Ví dụ: 'chiều dài 500, chiều rộng 300, chiều cao 200'", 'system');
+
+
+// Thêm vào cuối file script.js
+
+// Help Modal Functions
+function help() {
+    const modal = document.getElementById('helpModal');
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    log("📖 Đã mở hướng dẫn sử dụng", 'system');
+}
+
+function closeHelp() {
+    const modal = document.getElementById('helpModal');
+    modal.classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+// Close modal on overlay click
+document.getElementById('helpModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeHelp();
+    }
+});
+
+// Close modal on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeHelp();
+    }
+});
