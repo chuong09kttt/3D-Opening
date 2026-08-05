@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>3D Opening & Cut Zone Tool Pro</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div class="app">
+    <!-- 3D Canvas -->
+    <div class="canvas-wrapper">
+        <div class="canvas-header">
+            <div class="canvas-title">
+                <span class="live-indicator"></span>
+                3D Model Viewer
+            </div>
+            <div class="canvas-actions">
+                <span class="fps-display">60 FPS</span>
+            </div>
+        </div>
+        <canvas id="view"></canvas>
+        <div class="canvas-overlay">
+            <div class="orientation-badge" id="oriBadge">Z</div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <!-- Control Grid -->
+        <div class="control-grid">
+            <!-- Position -->
+            <div class="control-group">
+                <div class="group-header">
+                    <span class="icon">📍</span>
+                    <h3>Position</h3>
+                </div>
+                <div class="input-grid">
+                    <div class="input-field">
+                        <label>X</label>
+                        <div class="input-wrapper">
+                            <input id="px" type="number" value="0" step="0.1">
+                            <span class="unit">mm</span>
+                        </div>
+                    </div>
+                    <div class="input-field">
+                        <label>Y</label>
+                        <div class="input-wrapper">
+                            <input id="py" type="number" value="0" step="0.1">
+                            <span class="unit">mm</span>
+                        </div>
+                    </div>
+                    <div class="input-field">
+                        <label>Z</label>
+                        <div class="input-wrapper">
+                            <input id="pz" type="number" value="0" step="0.1">
+                            <span class="unit">mm</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dimension -->
+            <div class="control-group">
+                <div class="group-header">
+                    <span class="icon">📐</span>
+                    <h3>Dimension</h3>
+                </div>
+                <div class="input-grid">
+                    <div class="input-field">
+                        <label>Length</label>
+                        <div class="input-wrapper">
+                            <input id="dx" type="number" value="0" step="0.1">
+                            <span class="unit">mm</span>
+                        </div>
+                    </div>
+                    <div class="input-field">
+                        <label>Width</label>
+                        <div class="input-wrapper">
+                            <input id="dy" type="number" value="0" step="0.1">
+                            <span class="unit">mm</span>
+                        </div>
+                    </div>
+                    <div class="input-field">
+                        <label>Height</label>
+                        <div class="input-wrapper">
+                            <input id="dz" type="number" value="0" step="0.1">
+                            <span class="unit">mm</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Radius & Orientation -->
+        <div class="control-row">
+            <div class="control-group radius-group">
+                <div class="group-header">
+                    <span class="icon">⭕</span>
+                    <h3>Corner Radius</h3>
+                </div>
+                <div class="radius-grid">
+                    <div class="radius-field">
+                        <label>R1</label>
+                        <input id="r1" type="number" value="150" step="0.1">
+                    </div>
+                    <div class="radius-field">
+                        <label>R2</label>
+                        <input id="r2" type="number" value="150" step="0.1">
+                    </div>
+                    <div class="radius-field">
+                        <label>R3</label>
+                        <input id="r3" type="number" value="150" step="0.1">
+                    </div>
+                    <div class="radius-field">
+                        <label>R4</label>
+                        <input id="r4" type="number" value="150" step="0.1">
+                    </div>
+                </div>
+            </div>
+
+            <div class="control-group orientation-group">
+                <div class="group-header">
+                    <span class="icon">🔄</span>
+                    <h3>Orientation</h3>
+                </div>
+                <div class="ori-buttons">
+                    <button onclick="setOri('X')" id="ox">X</button>
+                    <button onclick="setOri('Y')" id="oy">Y</button>
+                    <button onclick="setOri('Z')" id="oz" class="active">Z</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="action-bar">
+            <button class="btn btn-primary" onclick="saveFile()">
+                <span class="btn-icon">💾</span>
+                Export MAC
+            </button>
+            <button class="btn btn-voice" onclick="voice()" id="voiceBtn">
+                <span class="btn-icon">🎤</span>
+                <span class="btn-text">Voice</span>
+                <span class="voice-pulse"></span>
+            </button>
+            <button class="btn btn-help" onclick="help()">
+                <span class="btn-icon">❓</span>
+                Help
+            </button>
+            <button class="btn btn-reset" onclick="reset()">
+                <span class="btn-icon">↺</span>
+                Reset
+            </button>
+        </div>
+
+        <!-- Chat / Log -->
+        <div class="chat-container">
+            <div class="chat-header">
+                <span class="chat-icon">💬</span>
+                <span>Assistant</span>
+                <span class="chat-status" id="chatStatus">● Ready</span>
+            </div>
+            <div id="chat"></div>
+        </div>
+    </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
