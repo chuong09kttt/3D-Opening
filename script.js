@@ -371,4 +371,208 @@ function processFullVoiceNLP(t) {
 
     // Fallback
     if (updatedCount === 0) {
-        let rawNums = str.match(/\d+
+        let rawNums = str.match(/\d+([.,]\d+)?/g);
+        if (rawNums && rawNums.length >= 3) {
+            document.getElementById("dx").value = cleanNumberString(rawNums[0]);
+            document.getElementById("dy").value = cleanNumberString(rawNums[1]);
+            document.getElementById("dz").value = cleanNumberString(rawNums[2]);
+            updatedCount = 3;
+        }
+    }
+
+    if (updatedCount > 0) {
+        draw();
+        const msg = "✅ Đã cập nhật thông số thành công!";
+        log("🤖 " + msg, 'assistant');
+        speak(msg);
+
+        // **FIX: Tự động hiện hộp thoại lưu sau khi nói xong**
+        autoSaveDialog();
+
+    } else {
+        const msg = "⚠️ Chưa nhận diện được thông số, vui lòng nói rõ hơn!";
+        log("🤖 " + msg, 'assistant');
+        speak(msg);
+    }
+}
+
+// --- NEW LOGIC: AUTO SAVE DIALOG ---
+function autoSaveDialog() {
+    if (hasAutoTriggeredSave) return; // Chỉ trigger 1 lần
+
+    let L = parseInputValue("dx");
+    let W = parseInputValue("dy");
+    let T = parseInputValue("dz");
+
+    if (L > 0 && W > 0 && T > 0) {
+        hasAutoTriggeredSave = true;
+        const modal = document.getElementById('saveModal');
+        if (modal) {
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+            document.getElementById('saveFileName').value = `Opening_${L}x${W}x${T}`; // Tên gợi ý
+            log("📁 Hệ thống đã nhận đủ dữ liệu, đang mở hộp thoại lưu file...", 'system');
+        }
+    }
+}
+
+function closeSaveDialog() {
+    const modal = document.getElementById('saveModal');
+    if (modal) {
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+        hasAutoTriggeredSave = false;
+    }
+}
+
+function confirmSave() {
+    const fileName = document.getElementById('saveFileName').value.trim() || "Opening";
+    generateAndDownloadFile(fileName);
+    closeSaveDialog();
+}
+
+// --- SAVE FILE LOGIC ---
+function saveFile() {
+    const fileName = document.getElementById('saveFileName').value.trim() || "Opening";
+    generateAndDownloadFile(fileName);
+}
+
+function generateAndDownloadFile(fileName) {
+    let px = parseInputValue("px");
+    let py = parseInputValue("py");
+    let pz = parseInputValue("pz");
+
+    let L = parseInputValue("dx");
+    let W = parseInputValue("dy");
+    let H = parseInputValue("dz"); // Height = Thickness
+
+    let r1 = parseInputValue("r1"); let r2 = parseInputValue("r2");
+    let r3 = parseInputValue("r3"); let r4 = parseInputValue("r4");
+
+    let oriStr = "ORI Y is Y and Z is Z";
+    if (ORI === "X") { oriStr = "ORI Y is -Z and Z is X"; } 
+    else if (ORI === "Y") { oriStr = "ORI Y is -X and Z is Y"; } 
+    else if (ORI === "Z") { oriStr = "ORI Y is Y and Z is Z"; }
+
+    let data = `NEW EQUIPMENT
+USRCOG ( X ( 0 ) Y ( 0 ) Z ( 0 ) )
+USRWCO ( X ( 0 ) Y ( 0 ) Z ( 0 ) )
+POS X ${px}mm Y ${py}mm Z ${pz}mm
+${oriStr}
+BUIL false
+DSCO unset
+PTSP unset
+INSC unset
+
+NEW EXTRUSION
+${oriStr}
+LEVE 0 2
+HEIG ${H}mm
+
+NEW LOOP
+
+NEW VERTEX
+FRAD ${r1}mm
+
+END
+NEW VERTEX
+POS X 0mm Y ${W}mm Z 0mm
+FRAD ${r2}mm
+
+END
+NEW VERTEX
+POS X ${L}mm Y ${W}mm Z 0mm
+FRAD ${r3}mm
+
+END
+NEW VERTEX
+POS X ${L}mm Y 0mm Z 0mm
+FRAD ${r4}mm
+
+END
+END
+END
+END`;
+
+    let blob = new Blob([data], { type: "text/plain" });
+    let a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `${fileName}.mac`;
+    document.body.appendChild(a); // Cần append vào DOM để một số trình duyệt hoạt động
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+    
+    log(`💾 Đã xuất file ${fileName}.mac thành công!`, 'system');
+    speak("File của bạn đã được xuất thành công");
+}
+
+function reset() {
+    document.getElementById("px").value = 0;
+    document.getElementById("py").value = 0;
+    document.getElementById("pz").value = 0;
+    document.getElementById("dx").value = 0;
+    document.getElementById("dy").value = 0;
+    document.getElementById("dz").value = 0;
+    document.getElementById("r1").value = 150;
+    document.getElementById("r2").value = 150;
+    document.getElementById("r3").value = 150;
+    document.getElementById("r4").value = 150;
+    hasAutoTriggeredSave = false;
+    setOri('Z');
+    log("↺ Đã reset tất cả thông số", 'system');
+    speak("Đã reset về mặc định");
+}
+
+// Help Modal Functions
+function help() {
+    const modal = document.getElementById('helpModal');
+    if (modal) {
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+        log("📖 Đã mở hướng dẫn sử dụng", 'system');
+    }
+}
+
+function closeHelp() {
+    const modal = document.getElementById('helpModal');
+    if (modal) {
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+}
+
+// Close modals on overlay click
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.modal-overlay').forEach(modal => {
+        modal.addEventListener('click', function(e) {
+            if (e.target === this) {
+                if(this.id === 'helpModal') closeHelp();
+                if(this.id === 'saveModal') closeSaveDialog();
+            }
+        });
+    });
+});
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeHelp();
+        closeSaveDialog();
+    }
+});
+
+// Input listeners
+document.querySelectorAll("input").forEach(i => {
+    i.addEventListener("input", () => {
+        hasAutoTriggeredSave = false; // Reset trigger nếu user chỉnh sửa tay
+        draw();
+    });
+});
+
+window.addEventListener("resize", draw);
+
+// Auto-start draw
+draw();
+log("🚀 3D Opening Tool Pro ready", 'system');
+log("💡 Nhấn nút Voice và nói thông số", 'system');
+log("📝 Ví dụ: 'chiều dài 500, chiều rộng 300, chiều dày 200'", 'system');
