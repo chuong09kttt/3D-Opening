@@ -83,7 +83,7 @@
                         </div>
                     </div>
                     <div class="input-field">
-                        <label>Height</label>
+                        <label>Thickness</label> <!-- Updated Label -->
                         <div class="input-wrapper">
                             <input id="dz" type="number" value="0" step="0.1">
                             <span class="unit">mm</span>
@@ -137,7 +137,7 @@
         <div class="action-bar">
             <button class="btn btn-primary" onclick="saveFile()">
                 <span class="btn-icon">💾</span>
-                Export MAC
+                Export <!-- Updated Text -->
             </button>
             <button class="btn btn-voice" onclick="voice()" id="voiceBtn">
                 <span class="btn-icon">🎤</span>
@@ -182,7 +182,7 @@
                     <div class="step-number">1</div>
                     <div class="step-content">
                         <h4>📐 Nhập thông số kích thước</h4>
-                        <p>Nhập các giá trị <strong>Length (Dài)</strong>, <strong>Width (Rộng)</strong>, <strong>Height (Cao)</strong> vào các ô tương ứng. Model 3D sẽ tự động cập nhật.</p>
+                        <p>Nhập các giá trị <strong>Length (Dài)</strong>, <strong>Width (Rộng)</strong>, <strong>Thickness (Dày)</strong> vào các ô tương ứng. Model 3D sẽ tự động cập nhật.</p>
                     </div>
                 </div>
                 <div class="help-step">
@@ -212,10 +212,10 @@
                         <h4>🎤 Sử dụng Voice Command</h4>
                         <p>Nhấn nút <strong>🎤 Voice</strong> và nói các thông số. Ví dụ:</p>
                         <div class="voice-examples">
-                            <span class="example-tag">"Chiều dài 500, rộng 300, cao 200"</span>
+                            <span class="example-tag">"Chiều dài 500, rộng 300, dày 200"</span>
                             <span class="example-tag">"Vị trí X 100, Y 50, Z 0"</span>
                             <span class="example-tag">"Bo góc 150"</span>
-                            <span class="example-tag">"Hướng Z"</span>
+                            <span class="example-tag">"Hướng X"</span>
                         </div>
                     </div>
                 </div>
@@ -223,7 +223,7 @@
                     <div class="step-number">6</div>
                     <div class="step-content">
                         <h4>💾 Xuất file MAC</h4>
-                        <p>Nhấn <strong>Export MAC</strong> để tạo file <code>Opening.mac</code> với tất cả thông số đã nhập.</p>
+                        <p>Nhấn <strong>Export</strong> để tạo file <code>Opening.mac</code> với tất cả thông số đã nhập.</p>
                     </div>
                 </div>
                 <div class="help-step">
@@ -242,6 +242,28 @@
         </div>
         <div class="modal-footer">
             <button class="btn btn-primary" onclick="closeHelp()">Đã hiểu ✓</button>
+        </div>
+    </div>
+</div>
+
+<!-- Auto Save Dialog Modal (New) -->
+<div class="modal-overlay" id="saveModal">
+    <div class="modal" style="max-width: 450px;">
+        <div class="modal-header">
+            <div class="modal-title">
+                <span class="modal-icon">💾</span>
+                <h2>Xác nhận lưu file</h2>
+            </div>
+        </div>
+        <div class="modal-body">
+            <p style="color: rgba(255,255,255,0.6); margin-bottom: 16px;">Hệ thống đã nhận đủ dữ liệu. Vui lòng đặt tên cho file xuất ra:</p>
+            <div class="input-wrapper" style="width: 100%;">
+                <input id="saveFileName" type="text" value="Opening" style="width: 100%; height: 44px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; color: #fff; font-size: 16px; padding: 0 14px; outline: none; font-family: 'Inter', sans-serif;">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-reset" onclick="closeSaveDialog()" style="flex: none; padding: 0 20px; background: rgba(255,255,255,0.1); box-shadow: none;">Hủy</button>
+            <button class="btn btn-primary" onclick="confirmSave()" style="flex: none; padding: 0 30px;">Xác nhận tải xuống</button>
         </div>
     </div>
 </div>
