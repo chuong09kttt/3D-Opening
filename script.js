@@ -11,28 +11,21 @@ let hasAutoTriggeredSave = false;
 
 // ==================== SECURITY: Disable F12 & Developer Tools ====================
 document.addEventListener('keydown', function(e) {
-    // Disable F12
     if (e.key === 'F12') {
         e.preventDefault();
         e.stopPropagation();
         return false;
     }
-    
-    // Disable Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U
     if (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'i' || e.key === 'j')) {
         e.preventDefault();
         e.stopPropagation();
         return false;
     }
-    
-    // Disable Ctrl+U (View Source)
     if (e.ctrlKey && (e.key === 'U' || e.key === 'u')) {
         e.preventDefault();
         e.stopPropagation();
         return false;
     }
-    
-    // Disable Ctrl+S (Save Page)
     if (e.ctrlKey && (e.key === 'S' || e.key === 's')) {
         e.preventDefault();
         e.stopPropagation();
@@ -40,36 +33,29 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
-// Disable right-click context menu
 document.addEventListener('contextmenu', function(e) {
     e.preventDefault();
     e.stopPropagation();
     return false;
 });
 
-// Disable drag
 document.addEventListener('dragstart', function(e) {
     e.preventDefault();
     return false;
 });
 
-// Prevent selection
 document.addEventListener('selectstart', function(e) {
     e.preventDefault();
     return false;
 });
 
-// Prevent copy
 document.addEventListener('copy', function(e) {
     e.preventDefault();
     return false;
 });
 
-// Detect DevTools opening via console.log
 let devtools = /./;
 devtools.toString = function() {
-    // If devtools is open, this will trigger
-    // We'll just log a warning
     console.warn('🔒 Developer tools are protected');
 };
 
@@ -388,7 +374,6 @@ function processFullVoiceNLP(t) {
         return null;
     };
 
-    // Check for save command
     if (str.match(/lưu\s*(?:file|tài\s*liệu|máy)?|save\s*/i) || str.match(/xuất\s*file/i)) {
         autoSaveDialog();
         log("💾 Đang mở hộp thoại lưu file", 'assistant');
@@ -396,7 +381,6 @@ function processFullVoiceNLP(t) {
         return;
     }
 
-    // Check if it's a search command
     if (str.match(/tìm\s*(?:kiếm|thử|tài\s*liệu|thông\s*tin)\s*/i) || str.match(/search\s*/i)) {
         let searchQuery = str.replace(/tìm\s*(?:kiếm|thử|tài\s*liệu|thông\s*tin)\s*/i, '').trim();
         searchQuery = searchQuery.replace(/(cho\s*tôi|giúp\s*tôi|hãy|xin\s*hãy)/gi, '').trim();
@@ -418,7 +402,6 @@ function processFullVoiceNLP(t) {
         return;
     }
 
-    // Check if it's an open document command
     if (str.match(/mở\s*(?:tài\s*liệu|file|document|doc|văn\s*bản)\s*/i) || str.match(/open\s*/i)) {
         let docName = str.replace(/mở\s*(?:tài\s*liệu|file|document|doc|văn\s*bản)\s*/i, '').trim();
         docName = docName.replace(/(cho\s*tôi|giúp\s*tôi|hãy|xin\s*hãy)/gi, '').trim();
@@ -437,7 +420,6 @@ function processFullVoiceNLP(t) {
         return;
     }
 
-    // 1. DIMENSION
     let len = findVal(["chiều dài", "độ dài", "length"]);
     let wid = findVal(["chiều rộng", "độ rộng", "width"]);
     let hei = findVal(["chiều dày", "độ dày", "thickness"]); 
@@ -450,7 +432,6 @@ function processFullVoiceNLP(t) {
     if (wid !== null) { document.getElementById("dy").value = wid; updatedCount++; }
     if (hei !== null) { document.getElementById("dz").value = hei; updatedCount++; }
 
-    // 2. POSITION
     let posX = findVal(["vị trí x", "pos x", "tọa độ x", "position x"]);
     let posY = findVal(["vị trí y", "pos y", "tọa độ y", "position y"]);
     let posZ = findVal(["vị trí z", "pos z", "tọa độ z", "position z"]);
@@ -469,7 +450,6 @@ function processFullVoiceNLP(t) {
     if (posY !== null) { document.getElementById("py").value = posY; updatedCount++; }
     if (posZ !== null) { document.getElementById("pz").value = posZ; updatedCount++; }
 
-    // 3. RADIUS
     let radAll = findVal(["bo góc", "bán kính", "radius"]);
     if (radAll !== null) {
         document.getElementById("r1").value = radAll;
@@ -479,18 +459,15 @@ function processFullVoiceNLP(t) {
         updatedCount++;
     }
 
-    // 4. ORIENTATION
     if (str.match(/hướng\s*x/i) || str.match(/ox\s*$/i)) { setOri('X'); updatedCount++; }
     else if (str.match(/hướng\s*y/i) || str.match(/oy\s*$/i)) { setOri('Y'); updatedCount++; }
     else if (str.match(/hướng\s*z/i) || str.match(/oz\s*$/i)) { setOri('Z'); updatedCount++; }
 
-    // 5. ACTION & FINALIZE
     if (updatedCount > 0) {
         draw();
         const msg = "✅ Đã cập nhật thông số thành công!";
         log("🤖 " + msg, 'assistant');
         speak(msg);
-        
         autoSaveDialog();
     } else {
         let rawNums = str.match(/\d+([.,]\d+)?/g);
@@ -503,7 +480,6 @@ function processFullVoiceNLP(t) {
             log("🤖 Đã nhận dạng số liệu theo thứ tự (Dài, Rộng, Dày)", 'assistant');
             autoSaveDialog();
         } else {
-            // Check if it might be a search query
             if (str.length > 3) {
                 const searchResults = performSmartSearch(str);
                 if (searchResults.length > 0) {
@@ -676,6 +652,9 @@ let library = [];
 let isLibraryVoiceListening = false;
 let libraryVoiceRecognition = null;
 
+// Password for deleting documents
+const DELETE_PASSWORD = 'admin123';
+
 function loadLibrary() {
     try {
         const data = localStorage.getItem('opening_library');
@@ -742,11 +721,10 @@ function renderLibrary(filteredList = null) {
             <span style="font-size: 20px;">📄</span>
             <div style="flex: 1; min-width: 0;">
                 <div style="font-weight: 600; color: #fff; font-size: 14px;">${doc.name}</div>
-                <div style="font-size: 11px; color: rgba(255,255,255,0.4); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${doc.link}</div>
                 ${tagsHtml}
             </div>
             <button onclick="openDocument(${originalIndex})" class="btn btn-primary" style="flex: none; padding: 0 16px; height: 32px; font-size: 11px;">📂 Mở</button>
-            <button onclick="deleteDocument(${originalIndex})" class="btn btn-reset" style="flex: none; padding: 0 12px; height: 32px; font-size: 11px; background: rgba(255,0,0,0.2);">✕</button>
+            <button onclick="showDeletePassword(${originalIndex})" class="btn btn-reset" style="flex: none; padding: 0 12px; height: 32px; font-size: 11px; background: rgba(255,0,0,0.2);">✕</button>
         </div>
     `}).join('');
 }
@@ -761,10 +739,19 @@ function addDocument() {
     
     if (!name) {
         log("⚠️ Vui lòng nhập tên tài liệu", 'system');
+        alert('⚠️ Vui lòng nhập tên tài liệu');
         return;
     }
     if (!link) {
         log("⚠️ Vui lòng nhập link Drive hoặc mô tả", 'system');
+        alert('⚠️ Vui lòng nhập link Drive hoặc mô tả');
+        return;
+    }
+    
+    const exists = library.some(doc => doc.name.toLowerCase() === name.toLowerCase());
+    if (exists) {
+        log(`⚠️ Tài liệu "${name}" đã tồn tại trong thư viện`, 'system');
+        alert(`⚠️ Tài liệu "${name}" đã tồn tại trong thư viện`);
         return;
     }
     
@@ -775,17 +762,100 @@ function addDocument() {
     linkInput.value = '';
     tagsInput.value = '';
     log(`📚 Đã thêm tài liệu: ${name}`, 'system');
+    alert(`✅ Đã thêm tài liệu: ${name} thành công!`);
 }
 
-function deleteDocument(index) {
+let deleteTargetIndex = null;
+
+function showDeletePassword(index) {
+    deleteTargetIndex = index;
     const doc = library[index];
-    if (confirm(`Xóa tài liệu "${doc.name}"?`)) {
-        library.splice(index, 1);
-        saveLibrary();
-        renderLibrary();
-        log(`🗑️ Đã xóa: ${doc.name}`, 'system');
+    
+    const passwordModal = document.createElement('div');
+    passwordModal.id = 'passwordModal';
+    passwordModal.style.cssText = `
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.85);
+        backdrop-filter: blur(10px);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 2000;
+        animation: fadeIn 0.3s ease;
+    `;
+    passwordModal.innerHTML = `
+        <div style="background: rgba(20,27,43,0.98); border-radius: 20px; border: 1px solid rgba(255,255,255,0.08); max-width: 400px; width: 90%; padding: 30px; box-shadow: 0 30px 60px rgba(0,0,0,0.8);">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <span style="font-size: 40px;">🔒</span>
+                <h3 style="color: #fff; margin: 10px 0 5px 0; font-weight: 700;">Xác nhận xóa</h3>
+                <p style="color: rgba(255,255,255,0.6); font-size: 13px;">Bạn đang xóa tài liệu: <strong style="color: #ff7675;">"${doc.name}"</strong></p>
+                <p style="color: rgba(255,255,255,0.4); font-size: 12px; margin-top: 5px;">Vui lòng nhập mật khẩu để xác nhận</p>
+            </div>
+            <input id="deletePasswordInput" type="password" placeholder="Nhập mật khẩu..." 
+                   style="width: 100%; height: 44px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 15px; padding: 0 14px; outline: none; font-family: 'Inter', sans-serif; margin-bottom: 15px;">
+            <div style="display: flex; gap: 10px;">
+                <button onclick="closePasswordModal()" style="flex: 1; height: 40px; border: none; border-radius: 10px; background: rgba(255,255,255,0.1); color: #fff; font-weight: 600; cursor: pointer;">Hủy</button>
+                <button onclick="confirmDeleteWithPassword()" style="flex: 1; height: 40px; border: none; border-radius: 10px; background: linear-gradient(135deg, #d63031, #ff7675); color: #fff; font-weight: 600; cursor: pointer;">Xác nhận xóa</button>
+            </div>
+            <div id="passwordError" style="color: #ff7675; font-size: 12px; margin-top: 10px; text-align: center; display: none;">❌ Mật khẩu không đúng!</div>
+        </div>
+    `;
+    document.body.appendChild(passwordModal);
+    
+    setTimeout(() => {
+        document.getElementById('deletePasswordInput').focus();
+    }, 100);
+}
+
+function closePasswordModal() {
+    const modal = document.getElementById('passwordModal');
+    if (modal) {
+        modal.remove();
+    }
+    deleteTargetIndex = null;
+}
+
+function confirmDeleteWithPassword() {
+    const passwordInput = document.getElementById('deletePasswordInput');
+    const password = passwordInput ? passwordInput.value.trim() : '';
+    const errorDiv = document.getElementById('passwordError');
+    
+    if (password === DELETE_PASSWORD) {
+        if (deleteTargetIndex !== null && deleteTargetIndex < library.length) {
+            const doc = library[deleteTargetIndex];
+            library.splice(deleteTargetIndex, 1);
+            saveLibrary();
+            renderLibrary();
+            log(`🗑️ Đã xóa: ${doc.name}`, 'system');
+            alert(`✅ Đã xóa tài liệu: ${doc.name}`);
+            closePasswordModal();
+        }
+    } else {
+        if (errorDiv) {
+            errorDiv.style.display = 'block';
+            errorDiv.textContent = '❌ Mật khẩu không đúng! Vui lòng thử lại.';
+        }
+        if (passwordInput) {
+            passwordInput.value = '';
+            passwordInput.focus();
+            passwordInput.style.borderColor = '#ff7675';
+            setTimeout(() => {
+                passwordInput.style.borderColor = 'rgba(255,255,255,0.1)';
+            }, 2000);
+        }
+        log(`❌ Xóa thất bại: Mật khẩu không đúng cho tài liệu`, 'system');
     }
 }
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+        const passwordModal = document.getElementById('passwordModal');
+        if (passwordModal) {
+            confirmDeleteWithPassword();
+        }
+    }
+});
 
 function openDocument(index) {
     const doc = library[index];
@@ -1000,7 +1070,6 @@ document.addEventListener('keydown', function(e) {
         closeLibrary();
     }
     
-    // Enter key for search
     if (e.key === 'Enter' && document.getElementById('libraryModal').classList.contains('active')) {
         const searchInput = document.getElementById('searchQuery');
         if (document.activeElement === searchInput) {
@@ -1024,3 +1093,4 @@ log("🚀 3D Opening Tool Pro ready", 'system');
 log("💡 Nhấn nút Voice và nói (VD: chiều dài 2000, chiều rộng 5000, chiều dày 300)", 'system');
 log("📚 Nhấn nút Library để quản lý tài liệu Drive", 'system');
 log("🔒 Bảo mật đã được kích hoạt (F12 đã bị vô hiệu hóa)", 'system');
+log("🔑 Mật khẩu xóa tài liệu mặc định: admin123", 'system');
