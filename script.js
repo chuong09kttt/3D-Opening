@@ -702,7 +702,7 @@ let library = [];
 let isLibraryVoiceListening = false;
 let libraryVoiceRecognition = null;
 
-// Password for deleting documents - ẨN trong code
+// Password for deleting documents - INTERNAL USE ONLY, NOT DISPLAYED
 const DELETE_PASSWORD = 'admin123';
 
 function loadLibrary() {
@@ -904,8 +904,6 @@ function confirmDeleteWithPassword() {
     const passwordInput = document.getElementById('deletePasswordInput');
     const password = passwordInput ? passwordInput.value.trim() : '';
     const errorDiv = document.getElementById('passwordError');
-    
-    console.log('Entered password:', password);
     
     if (password === DELETE_PASSWORD) {
         if (deleteTargetIndex !== null && deleteTargetIndex < library.length) {
@@ -1218,4 +1216,3 @@ draw();
 log("🚀 3D Opening Tool Pro ready", 'system');
 log("💡 Nhấn nút Voice và nói (VD: chiều dài 2000, chiều rộng 5000, chiều dày 300)", 'system');
 log("📚 Nhấn nút Library để quản lý tài liệu Drive", 'system');
-// Đã xóa 2 dòng thông báo bảo mật
