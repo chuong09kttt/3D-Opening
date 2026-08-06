@@ -1220,6 +1220,4 @@ draw();
 log("🚀 3D Opening Tool Pro ready", 'system');
 log("💡 Nhấn nút Voice và nói (VD: chiều dài 2000, chiều rộng 5000, chiều dày 300)", 'system');
 log("📚 Nhấn nút Library để quản lý tài liệu Drive", 'system');
-log("🔒 Bảo mật đã được kích hoạt (F12 đã bị vô hiệu hóa)", 'system');
-log("🔑 Mật khẩu xóa tài liệu mặc định: admin123", 'system');
 log("🌐 Hỗ trợ cả tiếng Việt và tiếng Anh cho Voice Command", 'system');
