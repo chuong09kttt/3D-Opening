@@ -281,21 +281,21 @@
                             <span class="help-icon">🔒</span>
                             <div>
                                 <strong>Bảo mật</strong>
-                                <p>Để xóa tài liệu, cần nhập <strong>mật khẩu bảo vệ</strong>. Điều này đảm bảo chỉ chủ sở hữu mới có thể xóa tài liệu.</p>
+                                <p>Để xóa tài liệu, cần nhập <strong>mật khẩu bảo vệ</strong>. Mật khẩu mặc định: <strong>admin123</strong></p>
                             </div>
                         </div>
                         <div class="help-item">
                             <span class="help-icon">🔍</span>
                             <div>
                                 <strong>Tìm kiếm</strong>
-                                <p>Nhập câu hỏi vào ô tìm kiếm hoặc nhấn nút <strong>Voice</strong> để tìm bằng giọng nói. Hệ thống sẽ tìm kiếm trong tên và tags của tài liệu.</p>
+                                <p>Nhập câu hỏi vào ô tìm kiếm hoặc nhấn nút <strong>Voice</strong> để tìm bằng giọng nói.</p>
                             </div>
                         </div>
                         <div class="help-item">
                             <span class="help-icon">📂</span>
                             <div>
                                 <strong>Mở tài liệu</strong>
-                                <p>Nhấn nút <strong>Mở</strong> bên cạnh tài liệu hoặc nói <strong>"Mở [tên tài liệu]"</strong> để mở link Drive.</p>
+                                <p>Nhấn nút <strong>Mở</strong> bên cạnh tài liệu hoặc nói <strong>"Mở [tên tài liệu]"</strong>.</p>
                             </div>
                         </div>
                     </div>
@@ -315,29 +315,15 @@
                             <span class="help-icon">🤖</span>
                             <div>
                                 <strong>Xuất tự động</strong>
-                                <p>Sau khi nhập đủ thông số (Dài, Rộng, Dày), hệ thống tự động mở hộp thoại lưu file. Bạn chỉ cần đặt tên và xác nhận.</p>
+                                <p>Sau khi nhập đủ thông số (Dài, Rộng, Dày), hệ thống tự động mở hộp thoại lưu file.</p>
                             </div>
                         </div>
                         <div class="help-item">
                             <span class="help-icon">🎤</span>
                             <div>
                                 <strong>Xuất bằng Voice</strong>
-                                <p>Nói <strong>"Lưu file"</strong> hoặc sau khi nhập đủ thông số bằng voice, hệ thống sẽ tự động mở hộp thoại lưu.</p>
+                                <p>Nói <strong>"Lưu file"</strong> để mở hộp thoại lưu.</p>
                             </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="help-category">
-                    <h3>⌨️ 5. Phím Tắt Hỗ Trợ</h3>
-                    <div class="help-commands">
-                        <div class="command-item">
-                            <span class="command-badge">Esc</span>
-                            <code>Đóng các modal đang mở</code>
-                        </div>
-                        <div class="command-item">
-                            <span class="command-badge">Enter</span>
-                            <code>Xác nhận tìm kiếm trong thư viện</code>
                         </div>
                     </div>
                 </div>
@@ -345,18 +331,17 @@
                 <div class="help-category warning">
                     <h3>⚠️ Lưu Ý Quan Trọng</h3>
                     <ul class="help-notes">
-                        <li>📌 Dữ liệu thư viện được lưu trên <strong>trình duyệt (localStorage)</strong>. Xóa cache sẽ mất dữ liệu.</li>
-                        <li>📌 Cần cấp quyền <strong>Microphone</strong> để sử dụng chức năng Voice.</li>
-                        <li>📌 File xuất có định dạng <strong>.mac</strong> - định dạng chuẩn của phần mềm thiết kế.</li>
-                        <li>📌 Đơn vị đo lường mặc định là <strong>mm</strong> (milimet).</li>
-                        <li>📌 Mật khẩu xóa tài liệu mặc định: <strong>admin123</strong></li>
-                        <li>📌 Khi gặp lỗi, nhấn <strong>Reset</strong> để khôi phục về mặc định.</li>
+                        <li>📌 Dữ liệu thư viện được lưu trên <strong>localStorage</strong>. Xóa cache sẽ mất dữ liệu.</li>
+                        <li>📌 Cần cấp quyền <strong>Microphone</strong> để sử dụng Voice.</li>
+                        <li>📌 File xuất có định dạng <strong>.mac</strong>.</li>
+                        <li>📌 Đơn vị đo lường là <strong>mm</strong>.</li>
+                        <li>📌 Mật khẩu xóa tài liệu: <strong>admin123</strong></li>
                     </ul>
                 </div>
             </div>
         </div>
         <div class="modal-footer">
-            <button class="btn btn-primary" onclick="closeHelp()">✅ Đã hiểu, bắt đầu sử dụng</button>
+            <button class="btn btn-primary" onclick="closeHelp()">✅ Đã hiểu</button>
         </div>
     </div>
 </div>
@@ -371,14 +356,14 @@
             </div>
         </div>
         <div class="modal-body">
-            <p style="color: rgba(255,255,255,0.7); margin-bottom: 16px;">Hệ thống đã nhận đủ dữ liệu. Vui lòng đặt tên cho file xuất ra:</p>
+            <p style="color: rgba(255,255,255,0.7); margin-bottom: 16px;">Vui lòng đặt tên cho file:</p>
             <div class="input-wrapper" style="width: 100%;">
                 <input id="saveFileName" type="text" value="Opening" style="width: 100%; height: 40px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 15px; padding: 0 14px; outline: none; font-family: 'Inter', sans-serif;">
             </div>
         </div>
         <div class="modal-footer">
             <button class="btn btn-reset" onclick="closeSaveDialog()" style="flex: none; padding: 0 20px; background: rgba(255,255,255,0.1); box-shadow: none;">Hủy</button>
-            <button class="btn btn-primary" onclick="confirmSave()" style="flex: none; padding: 0 30px;">Xác nhận tải xuống</button>
+            <button class="btn btn-primary" onclick="confirmSave()" style="flex: none; padding: 0 30px;">Tải xuống</button>
         </div>
     </div>
 </div>
@@ -416,7 +401,7 @@
                 <input id="newDocName" type="text" placeholder="Tên tài liệu..." style="flex: 1; min-width: 150px; height: 40px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 14px; padding: 0 14px; outline: none; font-family: 'Inter', sans-serif;">
                 <input id="newDocLink" type="text" placeholder="Link Drive..." style="flex: 2; min-width: 200px; height: 40px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 14px; padding: 0 14px; outline: none; font-family: 'Inter', sans-serif;">
                 <input id="newDocTags" type="text" placeholder="Tags (cách nhau dấu phẩy)..." style="flex: 1; min-width: 120px; height: 40px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 14px; padding: 0 14px; outline: none; font-family: 'Inter', sans-serif;">
-                <button class="btn btn-primary" onclick="addDocument()" style="flex: none; padding: 0 20px; height: 40px;">➕ Thêm</button>
+                <button class="btn btn-primary" onclick="addDocument()" id="addDocBtn" style="flex: none; padding: 0 20px; height: 40px;">➕ Thêm</button>
             </div>
 
             <!-- Password notice -->
