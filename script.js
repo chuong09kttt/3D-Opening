@@ -54,11 +54,6 @@ document.addEventListener('copy', function(e) {
     return false;
 });
 
-let devtools = /./;
-devtools.toString = function() {
-    console.warn('🔒 Developer tools are protected');
-};
-
 // ==================== VOICE RECOGNITION ====================
 function initVoice() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -729,22 +724,36 @@ function renderLibrary(filteredList = null) {
     `}).join('');
 }
 
+// ==================== ADD DOCUMENT ====================
 function addDocument() {
+    console.log('addDocument called');
+    
     const nameInput = document.getElementById('newDocName');
     const linkInput = document.getElementById('newDocLink');
     const tagsInput = document.getElementById('newDocTags');
+    
+    if (!nameInput || !linkInput || !tagsInput) {
+        console.error('Input elements not found');
+        alert('⚠️ Lỗi: Không tìm thấy các trường nhập liệu');
+        return;
+    }
+    
     const name = nameInput.value.trim();
     const link = linkInput.value.trim();
     const tags = tagsInput.value.trim().split(',').map(t => t.trim()).filter(t => t);
     
+    console.log('Name:', name, 'Link:', link, 'Tags:', tags);
+    
     if (!name) {
         log("⚠️ Vui lòng nhập tên tài liệu", 'system');
         alert('⚠️ Vui lòng nhập tên tài liệu');
+        nameInput.focus();
         return;
     }
     if (!link) {
         log("⚠️ Vui lòng nhập link Drive hoặc mô tả", 'system');
         alert('⚠️ Vui lòng nhập link Drive hoặc mô tả');
+        linkInput.focus();
         return;
     }
     
@@ -752,24 +761,37 @@ function addDocument() {
     if (exists) {
         log(`⚠️ Tài liệu "${name}" đã tồn tại trong thư viện`, 'system');
         alert(`⚠️ Tài liệu "${name}" đã tồn tại trong thư viện`);
+        nameInput.focus();
+        nameInput.select();
         return;
     }
     
     library.push({ name, link, tags });
     saveLibrary();
     renderLibrary();
+    
     nameInput.value = '';
     linkInput.value = '';
     tagsInput.value = '';
+    
     log(`📚 Đã thêm tài liệu: ${name}`, 'system');
     alert(`✅ Đã thêm tài liệu: ${name} thành công!`);
+    nameInput.focus();
 }
 
+// ==================== DELETE WITH PASSWORD ====================
 let deleteTargetIndex = null;
 
 function showDeletePassword(index) {
+    console.log('showDeletePassword called for index:', index);
+    
     deleteTargetIndex = index;
     const doc = library[index];
+    
+    if (!doc) {
+        alert('⚠️ Không tìm thấy tài liệu');
+        return;
+    }
     
     const passwordModal = document.createElement('div');
     passwordModal.id = 'passwordModal';
@@ -791,6 +813,7 @@ function showDeletePassword(index) {
                 <h3 style="color: #fff; margin: 10px 0 5px 0; font-weight: 700;">Xác nhận xóa</h3>
                 <p style="color: rgba(255,255,255,0.6); font-size: 13px;">Bạn đang xóa tài liệu: <strong style="color: #ff7675;">"${doc.name}"</strong></p>
                 <p style="color: rgba(255,255,255,0.4); font-size: 12px; margin-top: 5px;">Vui lòng nhập mật khẩu để xác nhận</p>
+                <p style="color: rgba(255,215,0,0.5); font-size: 11px; margin-top: 5px;">Mật khẩu mặc định: admin123</p>
             </div>
             <input id="deletePasswordInput" type="password" placeholder="Nhập mật khẩu..." 
                    style="width: 100%; height: 44px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 15px; padding: 0 14px; outline: none; font-family: 'Inter', sans-serif; margin-bottom: 15px;">
@@ -804,22 +827,31 @@ function showDeletePassword(index) {
     document.body.appendChild(passwordModal);
     
     setTimeout(() => {
-        document.getElementById('deletePasswordInput').focus();
-    }, 100);
+        const input = document.getElementById('deletePasswordInput');
+        if (input) {
+            input.focus();
+        }
+    }, 200);
 }
 
 function closePasswordModal() {
+    console.log('closePasswordModal called');
     const modal = document.getElementById('passwordModal');
     if (modal) {
         modal.remove();
     }
     deleteTargetIndex = null;
+    window.wrongPasswordAttempts = 0;
 }
 
 function confirmDeleteWithPassword() {
+    console.log('confirmDeleteWithPassword called');
+    
     const passwordInput = document.getElementById('deletePasswordInput');
     const password = passwordInput ? passwordInput.value.trim() : '';
     const errorDiv = document.getElementById('passwordError');
+    
+    console.log('Entered password:', password);
     
     if (password === DELETE_PASSWORD) {
         if (deleteTargetIndex !== null && deleteTargetIndex < library.length) {
@@ -829,6 +861,9 @@ function confirmDeleteWithPassword() {
             renderLibrary();
             log(`🗑️ Đã xóa: ${doc.name}`, 'system');
             alert(`✅ Đã xóa tài liệu: ${doc.name}`);
+            closePasswordModal();
+        } else {
+            alert('⚠️ Lỗi: Không tìm thấy tài liệu để xóa');
             closePasswordModal();
         }
     } else {
@@ -844,7 +879,17 @@ function confirmDeleteWithPassword() {
                 passwordInput.style.borderColor = 'rgba(255,255,255,0.1)';
             }, 2000);
         }
-        log(`❌ Xóa thất bại: Mật khẩu không đúng cho tài liệu`, 'system');
+        log(`❌ Xóa thất bại: Mật khẩu không đúng`, 'system');
+        
+        if (!window.wrongPasswordAttempts) {
+            window.wrongPasswordAttempts = 0;
+        }
+        window.wrongPasswordAttempts++;
+        if (window.wrongPasswordAttempts >= 3) {
+            alert('🔒 Bạn đã nhập sai mật khẩu 3 lần. Vui lòng thử lại sau.');
+            closePasswordModal();
+            window.wrongPasswordAttempts = 0;
+        }
     }
 }
 
@@ -852,12 +897,15 @@ document.addEventListener('keydown', function(e) {
     if (e.key === 'Enter') {
         const passwordModal = document.getElementById('passwordModal');
         if (passwordModal) {
+            e.preventDefault();
             confirmDeleteWithPassword();
         }
     }
 });
 
+// ==================== OTHER LIBRARY FUNCTIONS ====================
 function openDocument(index) {
+    console.log('openDocument called for index:', index);
     const doc = library[index];
     if (doc && doc.link) {
         if (doc.link.startsWith('http://') || doc.link.startsWith('https://')) {
@@ -867,6 +915,8 @@ function openDocument(index) {
             speak(`Đã tìm thấy thông tin về ${doc.name}`);
         }
         log(`📂 Đang mở: ${doc.name}`, 'system');
+    } else {
+        alert('⚠️ Không tìm thấy tài liệu hoặc link không hợp lệ');
     }
 }
 
@@ -878,6 +928,7 @@ function openLibrary() {
         renderLibrary();
         document.getElementById('searchQuery').value = '';
         document.getElementById('searchResults').style.display = 'none';
+        log("📚 Đã mở thư viện tài liệu", 'system');
     }
 }
 
@@ -887,11 +938,13 @@ function closeLibrary() {
         modal.classList.remove('active');
         document.body.style.overflow = '';
         stopLibraryVoice();
+        closePasswordModal();
     }
 }
 
 // ==================== SMART SEARCH ====================
 function searchDocuments() {
+    console.log('searchDocuments called');
     const query = document.getElementById('searchQuery').value.trim();
     if (!query) {
         renderLibrary();
@@ -966,6 +1019,7 @@ function voiceSearchLibrary() {
         const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SR) {
             log("❌ Trình duyệt không hỗ trợ Voice", 'system');
+            alert("❌ Trình duyệt không hỗ trợ Voice");
             return;
         }
         
