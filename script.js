@@ -369,6 +369,49 @@ function processFullVoiceNLP(t) {
         return null;
     };
 
+    // Check for English search command
+    if (str.match(/search\s+(?:for\s+)?(.+)/i)) {
+        let searchQuery = str.replace(/search\s+(?:for\s+)?/i, '').trim();
+        if (searchQuery && searchQuery.length > 1) {
+            document.getElementById('searchQuery').value = searchQuery;
+            const results = performSmartSearch(searchQuery);
+            if (results.length > 0) {
+                const bestMatch = results[0];
+                if (bestMatch.link) {
+                    if (bestMatch.link.startsWith('http://') || bestMatch.link.startsWith('https://')) {
+                        window.open(bestMatch.link, '_blank');
+                    }
+                    log(`🎤 Voice: Opened "${bestMatch.name}"`, 'assistant');
+                    speak(`Opening ${bestMatch.name}`);
+                }
+                searchDocuments();
+            } else {
+                speak(`No results found for "${searchQuery}"`);
+                searchDocuments();
+            }
+            const modal = document.getElementById('libraryModal');
+            if (!modal.classList.contains('active')) {
+                openLibrary();
+            }
+            updatedCount++;
+        }
+        return;
+    }
+
+    // Check for English open document command
+    if (str.match(/open\s+(?:document|file|doc)\s+(.+)/i)) {
+        let docName = str.replace(/open\s+(?:document|file|doc)\s+/i, '').trim();
+        if (docName && docName.length > 1) {
+            if (searchAndOpenDocument(docName)) {
+                updatedCount++;
+            } else {
+                speak(`Document "${docName}" not found in library`);
+                log(`❌ Document not found: ${docName}`, 'assistant');
+            }
+        }
+        return;
+    }
+
     if (str.match(/lưu\s*(?:file|tài\s*liệu|máy)?|save\s*/i) || str.match(/xuất\s*file/i)) {
         autoSaveDialog();
         log("💾 Đang mở hộp thoại lưu file", 'assistant');
@@ -382,9 +425,21 @@ function processFullVoiceNLP(t) {
         
         if (searchQuery && searchQuery.length > 1) {
             document.getElementById('searchQuery').value = searchQuery;
-            searchDocuments();
-            log(`🔍 Voice: Tìm kiếm "${searchQuery}"`, 'user');
-            speak(`Đang tìm kiếm "${searchQuery}"`);
+            const results = performSmartSearch(searchQuery);
+            if (results.length > 0) {
+                const bestMatch = results[0];
+                if (bestMatch.link) {
+                    if (bestMatch.link.startsWith('http://') || bestMatch.link.startsWith('https://')) {
+                        window.open(bestMatch.link, '_blank');
+                    }
+                    log(`🎤 Voice: Đã mở "${bestMatch.name}"`, 'assistant');
+                    speak(`Đã mở ${bestMatch.name}`);
+                }
+                searchDocuments();
+            } else {
+                speak(`Không tìm thấy kết quả cho "${searchQuery}"`);
+                searchDocuments();
+            }
             const modal = document.getElementById('libraryModal');
             if (!modal.classList.contains('active')) {
                 openLibrary();
@@ -658,24 +713,24 @@ function loadLibrary() {
         } else {
             library = [
                 { 
-                    name: 'Mẫu cửa sổ 1', 
+                    name: 'Sample Window 1', 
                     link: 'https://drive.google.com/file/d/example1/view',
-                    tags: ['cửa sổ', 'mẫu 1', 'window', 'phòng khách']
+                    tags: ['window', 'sample 1', 'living room']
                 },
                 { 
-                    name: 'Mẫu cửa sổ 2', 
+                    name: 'Sample Window 2', 
                     link: 'https://drive.google.com/file/d/example2/view',
-                    tags: ['cửa sổ', 'mẫu 2', 'window', 'phòng ngủ']
+                    tags: ['window', 'sample 2', 'bedroom']
                 },
                 { 
-                    name: 'Mẫu cửa chính', 
+                    name: 'Main Door Sample', 
                     link: 'https://drive.google.com/file/d/example3/view',
-                    tags: ['cửa chính', 'main door', 'phòng khách', 'lối vào']
+                    tags: ['main door', 'living room', 'entrance']
                 },
                 { 
-                    name: 'Cửa sổ phòng khách hiện đại', 
+                    name: 'Modern Living Room Window', 
                     link: 'https://drive.google.com/file/d/example4/view',
-                    tags: ['cửa sổ', 'phòng khách', 'hiện đại', 'modern']
+                    tags: ['window', 'living room', 'modern']
                 }
             ];
             saveLibrary();
@@ -699,7 +754,7 @@ function renderLibrary(filteredList = null) {
     const docs = filteredList || library;
     
     if (docs.length === 0) {
-        list.innerHTML = `<div style="text-align: center; color: rgba(255,255,255,0.4); padding: 30px 0;">📭 Không tìm thấy tài liệu nào</div>`;
+        list.innerHTML = `<div style="text-align: center; color: rgba(255,255,255,0.4); padding: 30px 0;">📭 No documents found</div>`;
         return;
     }
     
@@ -718,7 +773,7 @@ function renderLibrary(filteredList = null) {
                 <div style="font-weight: 600; color: #fff; font-size: 14px;">${doc.name}</div>
                 ${tagsHtml}
             </div>
-            <button onclick="openDocument(${originalIndex})" class="btn btn-primary" style="flex: none; padding: 0 16px; height: 32px; font-size: 11px;">📂 Mở</button>
+            <button onclick="openDocument(${originalIndex})" class="btn btn-primary" style="flex: none; padding: 0 16px; height: 32px; font-size: 11px;">📂 Open</button>
             <button onclick="showDeletePassword(${originalIndex})" class="btn btn-reset" style="flex: none; padding: 0 12px; height: 32px; font-size: 11px; background: rgba(255,0,0,0.2);">✕</button>
         </div>
     `}).join('');
@@ -734,7 +789,7 @@ function addDocument() {
     
     if (!nameInput || !linkInput || !tagsInput) {
         console.error('Input elements not found');
-        alert('⚠️ Lỗi: Không tìm thấy các trường nhập liệu');
+        alert('⚠️ Error: Input fields not found');
         return;
     }
     
@@ -745,22 +800,22 @@ function addDocument() {
     console.log('Name:', name, 'Link:', link, 'Tags:', tags);
     
     if (!name) {
-        log("⚠️ Vui lòng nhập tên tài liệu", 'system');
-        alert('⚠️ Vui lòng nhập tên tài liệu');
+        log("⚠️ Please enter document name", 'system');
+        alert('⚠️ Please enter document name');
         nameInput.focus();
         return;
     }
     if (!link) {
-        log("⚠️ Vui lòng nhập link Drive hoặc mô tả", 'system');
-        alert('⚠️ Vui lòng nhập link Drive hoặc mô tả');
+        log("⚠️ Please enter Drive link or description", 'system');
+        alert('⚠️ Please enter Drive link or description');
         linkInput.focus();
         return;
     }
     
     const exists = library.some(doc => doc.name.toLowerCase() === name.toLowerCase());
     if (exists) {
-        log(`⚠️ Tài liệu "${name}" đã tồn tại trong thư viện`, 'system');
-        alert(`⚠️ Tài liệu "${name}" đã tồn tại trong thư viện`);
+        log(`⚠️ Document "${name}" already exists in library`, 'system');
+        alert(`⚠️ Document "${name}" already exists in library`);
         nameInput.focus();
         nameInput.select();
         return;
@@ -774,8 +829,8 @@ function addDocument() {
     linkInput.value = '';
     tagsInput.value = '';
     
-    log(`📚 Đã thêm tài liệu: ${name}`, 'system');
-    alert(`✅ Đã thêm tài liệu: ${name} thành công!`);
+    log(`📚 Added document: ${name}`, 'system');
+    alert(`✅ Document "${name}" added successfully!`);
     nameInput.focus();
 }
 
@@ -789,7 +844,7 @@ function showDeletePassword(index) {
     const doc = library[index];
     
     if (!doc) {
-        alert('⚠️ Không tìm thấy tài liệu');
+        alert('⚠️ Document not found');
         return;
     }
     
@@ -810,18 +865,18 @@ function showDeletePassword(index) {
         <div style="background: rgba(20,27,43,0.98); border-radius: 20px; border: 1px solid rgba(255,255,255,0.08); max-width: 400px; width: 90%; padding: 30px; box-shadow: 0 30px 60px rgba(0,0,0,0.8);">
             <div style="text-align: center; margin-bottom: 20px;">
                 <span style="font-size: 40px;">🔒</span>
-                <h3 style="color: #fff; margin: 10px 0 5px 0; font-weight: 700;">Xác nhận xóa</h3>
-                <p style="color: rgba(255,255,255,0.6); font-size: 13px;">Bạn đang xóa tài liệu: <strong style="color: #ff7675;">"${doc.name}"</strong></p>
-                <p style="color: rgba(255,255,255,0.4); font-size: 12px; margin-top: 5px;">Vui lòng nhập mật khẩu để xác nhận</p>
-                <p style="color: rgba(255,215,0,0.5); font-size: 11px; margin-top: 5px;">Mật khẩu mặc định: admin123</p>
+                <h3 style="color: #fff; margin: 10px 0 5px 0; font-weight: 700;">Confirm Deletion</h3>
+                <p style="color: rgba(255,255,255,0.6); font-size: 13px;">You are deleting: <strong style="color: #ff7675;">"${doc.name}"</strong></p>
+                <p style="color: rgba(255,255,255,0.4); font-size: 12px; margin-top: 5px;">Enter password to confirm</p>
+                <p style="color: rgba(255,215,0,0.5); font-size: 11px; margin-top: 5px;">Default password: admin123</p>
             </div>
-            <input id="deletePasswordInput" type="password" placeholder="Nhập mật khẩu..." 
+            <input id="deletePasswordInput" type="password" placeholder="Enter password..." 
                    style="width: 100%; height: 44px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 15px; padding: 0 14px; outline: none; font-family: 'Inter', sans-serif; margin-bottom: 15px;">
             <div style="display: flex; gap: 10px;">
-                <button onclick="closePasswordModal()" style="flex: 1; height: 40px; border: none; border-radius: 10px; background: rgba(255,255,255,0.1); color: #fff; font-weight: 600; cursor: pointer;">Hủy</button>
-                <button onclick="confirmDeleteWithPassword()" style="flex: 1; height: 40px; border: none; border-radius: 10px; background: linear-gradient(135deg, #d63031, #ff7675); color: #fff; font-weight: 600; cursor: pointer;">Xác nhận xóa</button>
+                <button onclick="closePasswordModal()" style="flex: 1; height: 40px; border: none; border-radius: 10px; background: rgba(255,255,255,0.1); color: #fff; font-weight: 600; cursor: pointer;">Cancel</button>
+                <button onclick="confirmDeleteWithPassword()" style="flex: 1; height: 40px; border: none; border-radius: 10px; background: linear-gradient(135deg, #d63031, #ff7675); color: #fff; font-weight: 600; cursor: pointer;">Confirm Delete</button>
             </div>
-            <div id="passwordError" style="color: #ff7675; font-size: 12px; margin-top: 10px; text-align: center; display: none;">❌ Mật khẩu không đúng!</div>
+            <div id="passwordError" style="color: #ff7675; font-size: 12px; margin-top: 10px; text-align: center; display: none;">❌ Incorrect password!</div>
         </div>
     `;
     document.body.appendChild(passwordModal);
@@ -859,17 +914,17 @@ function confirmDeleteWithPassword() {
             library.splice(deleteTargetIndex, 1);
             saveLibrary();
             renderLibrary();
-            log(`🗑️ Đã xóa: ${doc.name}`, 'system');
-            alert(`✅ Đã xóa tài liệu: ${doc.name}`);
+            log(`🗑️ Deleted: ${doc.name}`, 'system');
+            alert(`✅ Document "${doc.name}" deleted successfully!`);
             closePasswordModal();
         } else {
-            alert('⚠️ Lỗi: Không tìm thấy tài liệu để xóa');
+            alert('⚠️ Error: Document not found');
             closePasswordModal();
         }
     } else {
         if (errorDiv) {
             errorDiv.style.display = 'block';
-            errorDiv.textContent = '❌ Mật khẩu không đúng! Vui lòng thử lại.';
+            errorDiv.textContent = '❌ Incorrect password! Please try again.';
         }
         if (passwordInput) {
             passwordInput.value = '';
@@ -879,14 +934,14 @@ function confirmDeleteWithPassword() {
                 passwordInput.style.borderColor = 'rgba(255,255,255,0.1)';
             }, 2000);
         }
-        log(`❌ Xóa thất bại: Mật khẩu không đúng`, 'system');
+        log(`❌ Delete failed: Incorrect password`, 'system');
         
         if (!window.wrongPasswordAttempts) {
             window.wrongPasswordAttempts = 0;
         }
         window.wrongPasswordAttempts++;
         if (window.wrongPasswordAttempts >= 3) {
-            alert('🔒 Bạn đã nhập sai mật khẩu 3 lần. Vui lòng thử lại sau.');
+            alert('🔒 You have entered the wrong password 3 times. Please try again later.');
             closePasswordModal();
             window.wrongPasswordAttempts = 0;
         }
@@ -911,12 +966,12 @@ function openDocument(index) {
         if (doc.link.startsWith('http://') || doc.link.startsWith('https://')) {
             window.open(doc.link, '_blank');
         } else {
-            log(`📄 Thông tin: ${doc.link}`, 'system');
-            speak(`Đã tìm thấy thông tin về ${doc.name}`);
+            log(`📄 Info: ${doc.link}`, 'system');
+            speak(`Found information about ${doc.name}`);
         }
-        log(`📂 Đang mở: ${doc.name}`, 'system');
+        log(`📂 Opening: ${doc.name}`, 'system');
     } else {
-        alert('⚠️ Không tìm thấy tài liệu hoặc link không hợp lệ');
+        alert('⚠️ Document not found or invalid link');
     }
 }
 
@@ -928,7 +983,7 @@ function openLibrary() {
         renderLibrary();
         document.getElementById('searchQuery').value = '';
         document.getElementById('searchResults').style.display = 'none';
-        log("📚 Đã mở thư viện tài liệu", 'system');
+        log("📚 Library opened", 'system');
     }
 }
 
@@ -958,8 +1013,8 @@ function searchDocuments() {
     if (results.length === 0) {
         resultsDiv.style.display = 'block';
         resultsDiv.innerHTML = `<div style="text-align: center; color: rgba(255,255,255,0.5); padding: 15px 0;">
-            🔍 Không tìm thấy tài liệu phù hợp với "${query}"
-            <br><span style="font-size: 12px;">Gợi ý: Thử tìm với từ khóa khác hoặc thêm tài liệu mới</span>
+            🔍 No documents found for "${query}"
+            <br><span style="font-size: 12px;">Try different keywords or add new documents</span>
         </div>`;
         renderLibrary();
         return;
@@ -967,7 +1022,7 @@ function searchDocuments() {
     
     resultsDiv.style.display = 'block';
     resultsDiv.innerHTML = `<div style="color: rgba(255,255,255,0.6); font-size: 12px; margin-bottom: 8px;">
-        ✅ Tìm thấy ${results.length} kết quả cho "${query}"
+        ✅ Found ${results.length} result(s) for "${query}"
     </div>`;
     
     renderLibrary(results);
@@ -1018,21 +1073,21 @@ function voiceSearchLibrary() {
     if (!libraryVoiceRecognition) {
         const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SR) {
-            log("❌ Trình duyệt không hỗ trợ Voice", 'system');
-            alert("❌ Trình duyệt không hỗ trợ Voice");
+            log("❌ Browser doesn't support Voice", 'system');
+            alert("❌ Browser doesn't support Voice");
             return;
         }
         
         libraryVoiceRecognition = new SR();
-        libraryVoiceRecognition.lang = "vi-VN";
+        libraryVoiceRecognition.lang = "en-US";
         libraryVoiceRecognition.continuous = false;
         libraryVoiceRecognition.interimResults = true;
         
         libraryVoiceRecognition.onstart = () => {
             isLibraryVoiceListening = true;
             document.getElementById('voiceSearchBtn').classList.add('listening');
-            document.getElementById('voiceSearchBtn').innerHTML = '<span class="btn-icon">⏹</span> Dừng';
-            log("🎤 Đang lắng nghe câu hỏi tìm kiếm...", 'system');
+            document.getElementById('voiceSearchBtn').innerHTML = '<span class="btn-icon">⏹</span> Stop';
+            log("🎤 Listening for search query...", 'system');
         };
         
         libraryVoiceRecognition.onend = () => {
@@ -1041,7 +1096,7 @@ function voiceSearchLibrary() {
         
         libraryVoiceRecognition.onerror = (e) => {
             if (e.error !== 'no-speech') {
-                log(`⚠️ Lỗi: ${e.error}`, 'system');
+                log(`⚠️ Error: ${e.error}`, 'system');
             }
             stopLibraryVoice();
         };
@@ -1052,10 +1107,29 @@ function voiceSearchLibrary() {
                 transcript += e.results[i][0].transcript;
                 if (e.results[i].isFinal) {
                     document.getElementById('searchQuery').value = transcript;
-                    searchDocuments();
+                    
+                    // Perform search and auto-open first result
+                    const results = performSmartSearch(transcript);
+                    
+                    if (results.length > 0) {
+                        const bestMatch = results[0];
+                        if (bestMatch.link) {
+                            if (bestMatch.link.startsWith('http://') || bestMatch.link.startsWith('https://')) {
+                                window.open(bestMatch.link, '_blank');
+                            } else {
+                                log(`📄 Info: ${bestMatch.link}`, 'system');
+                            }
+                            log(`🎤 Voice: Opened "${bestMatch.name}"`, 'assistant');
+                            speak(`Opening ${bestMatch.name}`);
+                        }
+                        searchDocuments();
+                    } else {
+                        log(`🔍 Voice: "${transcript}" - No results found`, 'user');
+                        speak(`No results found for "${transcript}"`);
+                        searchDocuments();
+                    }
+                    
                     stopLibraryVoice();
-                    log(`🔍 Voice: "${transcript}"`, 'user');
-                    speak(`Đã tìm kiếm "${transcript}"`);
                 }
             }
         };
@@ -1091,10 +1165,10 @@ function searchAndOpenDocument(name) {
             if (bestMatch.link.startsWith('http://') || bestMatch.link.startsWith('https://')) {
                 window.open(bestMatch.link, '_blank');
             } else {
-                log(`📄 Thông tin: ${bestMatch.link}`, 'system');
+                log(`📄 Info: ${bestMatch.link}`, 'system');
             }
-            log(`📂 Voice: Đã mở tài liệu "${bestMatch.name}"`, 'assistant');
-            speak(`Đã mở tài liệu ${bestMatch.name}`);
+            log(`📂 Voice: Opened "${bestMatch.name}"`, 'assistant');
+            speak(`Opened ${bestMatch.name}`);
             return true;
         }
     }
@@ -1148,3 +1222,4 @@ log("💡 Nhấn nút Voice và nói (VD: chiều dài 2000, chiều rộng 5000
 log("📚 Nhấn nút Library để quản lý tài liệu Drive", 'system');
 log("🔒 Bảo mật đã được kích hoạt (F12 đã bị vô hiệu hóa)", 'system');
 log("🔑 Mật khẩu xóa tài liệu mặc định: admin123", 'system');
+log("🌐 Hỗ trợ cả tiếng Việt và tiếng Anh cho Voice Command", 'system');
