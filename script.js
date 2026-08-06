@@ -702,7 +702,7 @@ let library = [];
 let isLibraryVoiceListening = false;
 let libraryVoiceRecognition = null;
 
-// Password for deleting documents - INTERNAL USE ONLY, NOT DISPLAYED
+// Password for deleting documents - INTERNAL USE ONLY, NOT DISPLAYED ANYWHERE
 const DELETE_PASSWORD = 'admin123';
 
 function loadLibrary() {
