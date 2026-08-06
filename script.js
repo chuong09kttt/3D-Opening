@@ -702,7 +702,7 @@ let library = [];
 let isLibraryVoiceListening = false;
 let libraryVoiceRecognition = null;
 
-// Password for deleting documents
+// Password for deleting documents - ẨN trong code
 const DELETE_PASSWORD = 'admin123';
 
 function loadLibrary() {
@@ -868,7 +868,6 @@ function showDeletePassword(index) {
                 <h3 style="color: #fff; margin: 10px 0 5px 0; font-weight: 700;">Confirm Deletion</h3>
                 <p style="color: rgba(255,255,255,0.6); font-size: 13px;">You are deleting: <strong style="color: #ff7675;">"${doc.name}"</strong></p>
                 <p style="color: rgba(255,255,255,0.4); font-size: 12px; margin-top: 5px;">Enter password to confirm</p>
-                <p style="color: rgba(255,215,0,0.5); font-size: 11px; margin-top: 5px;">Default password: admin123</p>
             </div>
             <input id="deletePasswordInput" type="password" placeholder="Enter password..." 
                    style="width: 100%; height: 44px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 15px; padding: 0 14px; outline: none; font-family: 'Inter', sans-serif; margin-bottom: 15px;">
@@ -1108,7 +1107,6 @@ function voiceSearchLibrary() {
                 if (e.results[i].isFinal) {
                     document.getElementById('searchQuery').value = transcript;
                     
-                    // Perform search and auto-open first result
                     const results = performSmartSearch(transcript);
                     
                     if (results.length > 0) {
@@ -1220,4 +1218,4 @@ draw();
 log("🚀 3D Opening Tool Pro ready", 'system');
 log("💡 Nhấn nút Voice và nói (VD: chiều dài 2000, chiều rộng 5000, chiều dày 300)", 'system');
 log("📚 Nhấn nút Library để quản lý tài liệu Drive", 'system');
-log("🌐 Hỗ trợ cả tiếng Việt và tiếng Anh cho Voice Command", 'system');
+// Đã xóa 2 dòng thông báo bảo mật
