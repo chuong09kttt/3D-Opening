@@ -121,10 +121,22 @@ input[type=number] { -moz-appearance: textfield !important; }
     flex-wrap: wrap;
 }
 .btn {
-    flex: 1; height: 40px; border: none; border-radius: 10px;
-    font-family: 'Inter', sans-serif; font-weight: 700; font-size: 12px;
-    color: #ffffff; cursor: pointer; transition: all 0.3s ease;
-    display: flex; align-items: center; justify-content: center; gap: 6px; position: relative; overflow: hidden;
+    flex: 1; 
+    height: 40px; 
+    border: none; 
+    border-radius: 10px;
+    font-family: 'Inter', sans-serif; 
+    font-weight: 700; 
+    font-size: 12px;
+    color: #ffffff; 
+    cursor: pointer; 
+    transition: all 0.3s ease;
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    gap: 6px; 
+    position: relative; 
+    overflow: hidden;
     min-width: 60px;
 }
 .btn:hover { transform: translateY(-1px); }
@@ -348,7 +360,7 @@ input[type=number] { -moz-appearance: textfield !important; }
     
     .action-bar {
         display: grid;
-        grid-template-columns: 1fr 1fr 1fr;
+        grid-template-columns: repeat(3, 1fr);
         gap: 6px;
     }
     .btn {
@@ -357,6 +369,9 @@ input[type=number] { -moz-appearance: textfield !important; }
         font-size: 11px;
         min-width: auto;
     }
+    .btn-primary { order: 1; }
+    .btn-voice { order: 2; }
+    .btn-reset { order: 3; }
     .btn-library { order: 4; }
     .btn-help { order: 5; }
     
@@ -377,8 +392,13 @@ input[type=number] { -moz-appearance: textfield !important; }
 
 @media (max-width: 480px) {
     .action-bar {
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: repeat(2, 1fr);
     }
+    .btn-primary { order: 1; }
+    .btn-voice { order: 2; }
+    .btn-reset { order: 3; }
+    .btn-library { order: 4; }
+    .btn-help { order: 5; }
     .btn { font-size: 10px; height: 34px; }
     .btn .btn-icon { font-size: 12px; }
 }
