@@ -364,11 +364,6 @@ input[type=number] { -moz-appearance: textfield !important; }
     transform: scale(0.96);
 }
 
-/* Library item - hide link */
-.library-item .doc-link {
-    display: none !important;
-}
-
 .library-item .btn-reset:hover {
     background: rgba(255,0,0,0.4) !important;
     transform: scale(1.05);
