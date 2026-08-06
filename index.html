@@ -171,7 +171,7 @@
     </div>
 </div>
 
-<!-- Help Modal -->
+<!-- Help Modal - TIẾNG VIỆT -->
 <div class="modal-overlay" id="helpModal">
     <div class="modal" style="max-width: 750px;">
         <div class="modal-header">
@@ -249,7 +249,7 @@
                         <div class="command-item">
                             <span class="command-badge">📚</span>
                             <code>"Tìm cửa sổ phòng khách"</code>
-                            <span class="command-desc">→ Tìm kiếm trong thư viện</span>
+                            <span class="command-desc">→ Tìm kiếm và mở tài liệu đầu tiên</span>
                         </div>
                         <div class="command-item">
                             <span class="command-badge">📂</span>
@@ -261,9 +261,19 @@
                             <code>"Lưu file"</code>
                             <span class="command-desc">→ Mở hộp thoại xuất file</span>
                         </div>
+                        <div class="command-item">
+                            <span class="command-badge">🇬🇧</span>
+                            <code>"Search living room window"</code>
+                            <span class="command-desc">→ Tìm kiếm và mở tài liệu (tiếng Anh)</span>
+                        </div>
+                        <div class="command-item">
+                            <span class="command-badge">🇬🇧</span>
+                            <code>"Open document main door"</code>
+                            <span class="command-desc">→ Mở tài liệu theo tên (tiếng Anh)</span>
+                        </div>
                     </div>
                     <div class="help-tip">
-                        💡 <strong>Mẹo:</strong> Hệ thống tự động nhận diện và cập nhật thông số sau khi bạn nói xong. Bạn có thể nói liên tục nhiều lệnh cùng lúc.
+                        💡 <strong>Mẹo:</strong> Hệ thống tự động nhận diện và cập nhật thông số sau khi bạn nói xong. Bạn có thể nói liên tục nhiều lệnh cùng lúc. Hỗ trợ cả <strong>tiếng Việt</strong> và <strong>tiếng Anh</strong>.
                     </div>
                 </div>
 
@@ -274,7 +284,7 @@
                             <span class="help-icon">➕</span>
                             <div>
                                 <strong>Thêm tài liệu</strong>
-                                <p>Nhập <strong>Tên</strong>, <strong>Link Drive</strong> và <strong>Tags</strong> (cách nhau dấu phẩy) → Nhấn "Thêm". Tags giúp tìm kiếm chính xác hơn.</p>
+                                <p>Nhập <strong>Tên</strong>, <strong>Link Drive</strong> và <strong>Tags</strong> (cách nhau dấu phẩy) → Nhấn "Add". Tags giúp tìm kiếm chính xác hơn.</p>
                             </div>
                         </div>
                         <div class="help-item">
@@ -288,14 +298,14 @@
                             <span class="help-icon">🔍</span>
                             <div>
                                 <strong>Tìm kiếm</strong>
-                                <p>Nhập câu hỏi vào ô tìm kiếm hoặc nhấn nút <strong>Voice</strong> để tìm bằng giọng nói.</p>
+                                <p>Nhập câu hỏi vào ô tìm kiếm hoặc nhấn nút <strong>Voice</strong> để tìm bằng giọng nói. Khi tìm bằng Voice, hệ thống sẽ tự động mở tài liệu đầu tiên.</p>
                             </div>
                         </div>
                         <div class="help-item">
                             <span class="help-icon">📂</span>
                             <div>
                                 <strong>Mở tài liệu</strong>
-                                <p>Nhấn nút <strong>Mở</strong> bên cạnh tài liệu hoặc nói <strong>"Mở [tên tài liệu]"</strong>.</p>
+                                <p>Nhấn nút <strong>Open</strong> bên cạnh tài liệu hoặc nói <strong>"Mở [tên tài liệu]"</strong>.</p>
                             </div>
                         </div>
                     </div>
@@ -336,6 +346,7 @@
                         <li>📌 File xuất có định dạng <strong>.mac</strong>.</li>
                         <li>📌 Đơn vị đo lường là <strong>mm</strong>.</li>
                         <li>📌 Mật khẩu xóa tài liệu: <strong>admin123</strong></li>
+                        <li>📌 Hỗ trợ cả <strong>tiếng Việt</strong> và <strong>tiếng Anh</strong> cho Voice Command.</li>
                     </ul>
                 </div>
             </div>
@@ -368,13 +379,13 @@
     </div>
 </div>
 
-<!-- Library Modal -->
+<!-- Library Modal - ENGLISH -->
 <div class="modal-overlay" id="libraryModal">
     <div class="modal" style="max-width: 750px;">
         <div class="modal-header">
             <div class="modal-title">
                 <span class="modal-icon">📚</span>
-                <h2>Thư viện tài liệu</h2>
+                <h2>Document Library</h2>
             </div>
             <button class="modal-close" onclick="closeLibrary()">✕</button>
         </div>
@@ -383,30 +394,30 @@
             <div style="margin-bottom: 16px; background: rgba(255,255,255,0.03); border-radius: 12px; padding: 14px; border: 1px solid rgba(255,255,255,0.06);">
                 <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
                     <span style="font-size: 16px;">🔍</span>
-                    <span style="color: rgba(255,255,255,0.7); font-weight: 600; font-size: 13px;">Tìm kiếm tài liệu</span>
+                    <span style="color: rgba(255,255,255,0.7); font-weight: 600; font-size: 13px;">Search Documents</span>
                     <button class="btn btn-voice" onclick="voiceSearchLibrary()" id="voiceSearchBtn" style="flex: none; padding: 0 16px; height: 32px; font-size: 11px; margin-left: auto;">
                         <span class="btn-icon">🎤</span> Voice
                     </button>
                 </div>
                 <div style="display: flex; gap: 10px;">
-                    <input id="searchQuery" type="text" placeholder="Nhập câu hỏi cần tìm (VD: cửa sổ phòng khách, mẫu cửa chính...)" 
+                    <input id="searchQuery" type="text" placeholder="Enter search query (e.g.: living room window, main door...)" 
                            style="flex: 1; height: 40px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 14px; padding: 0 14px; outline: none; font-family: 'Inter', sans-serif;">
-                    <button class="btn btn-primary" onclick="searchDocuments()" style="flex: none; padding: 0 24px; height: 40px;">🔍 Tìm</button>
+                    <button class="btn btn-primary" onclick="searchDocuments()" style="flex: none; padding: 0 24px; height: 40px;">🔍 Search</button>
                 </div>
                 <div id="searchResults" style="margin-top: 10px; display: none;"></div>
             </div>
 
             <!-- Add Document Section -->
             <div style="margin-bottom: 16px; display: flex; gap: 10px; flex-wrap: wrap; background: rgba(255,255,255,0.02); border-radius: 12px; padding: 14px; border: 1px solid rgba(255,255,255,0.04);">
-                <input id="newDocName" type="text" placeholder="Tên tài liệu..." style="flex: 1; min-width: 150px; height: 40px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 14px; padding: 0 14px; outline: none; font-family: 'Inter', sans-serif;">
-                <input id="newDocLink" type="text" placeholder="Link Drive..." style="flex: 2; min-width: 200px; height: 40px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 14px; padding: 0 14px; outline: none; font-family: 'Inter', sans-serif;">
-                <input id="newDocTags" type="text" placeholder="Tags (cách nhau dấu phẩy)..." style="flex: 1; min-width: 120px; height: 40px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 14px; padding: 0 14px; outline: none; font-family: 'Inter', sans-serif;">
-                <button class="btn btn-primary" onclick="addDocument()" id="addDocBtn" style="flex: none; padding: 0 20px; height: 40px;">➕ Thêm</button>
+                <input id="newDocName" type="text" placeholder="Document name..." style="flex: 1; min-width: 150px; height: 40px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 14px; padding: 0 14px; outline: none; font-family: 'Inter', sans-serif;">
+                <input id="newDocLink" type="text" placeholder="Drive link..." style="flex: 2; min-width: 200px; height: 40px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 14px; padding: 0 14px; outline: none; font-family: 'Inter', sans-serif;">
+                <input id="newDocTags" type="text" placeholder="Tags (comma separated)..." style="flex: 1; min-width: 120px; height: 40px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 14px; padding: 0 14px; outline: none; font-family: 'Inter', sans-serif;">
+                <button class="btn btn-primary" onclick="addDocument()" id="addDocBtn" style="flex: none; padding: 0 20px; height: 40px;">➕ Add</button>
             </div>
 
             <!-- Password notice -->
             <div style="margin-bottom: 12px; padding: 8px 12px; background: rgba(255,215,0,0.05); border: 1px solid rgba(255,215,0,0.1); border-radius: 8px;">
-                <span style="color: rgba(255,215,0,0.7); font-size: 11px;">🔒 Để xóa tài liệu, cần nhập mật khẩu bảo vệ</span>
+                <span style="color: rgba(255,215,0,0.7); font-size: 11px;">🔒 Password required to delete documents</span>
             </div>
 
             <!-- Document List -->
@@ -415,7 +426,7 @@
             </div>
         </div>
         <div class="modal-footer">
-            <button class="btn btn-reset" onclick="closeLibrary()" style="flex: none; padding: 0 30px; background: rgba(255,255,255,0.1); box-shadow: none;">Đóng</button>
+            <button class="btn btn-reset" onclick="closeLibrary()" style="flex: none; padding: 0 30px; background: rgba(255,255,255,0.1); box-shadow: none;">Close</button>
         </div>
     </div>
 </div>
