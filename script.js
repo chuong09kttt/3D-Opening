@@ -9,7 +9,71 @@ let partialTranscript = '';
 let isSpeaking = false;
 let hasAutoTriggeredSave = false; 
 
-// Voice recognition with silence detection
+// ==================== SECURITY: Disable F12 & Developer Tools ====================
+document.addEventListener('keydown', function(e) {
+    // Disable F12
+    if (e.key === 'F12') {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+    }
+    
+    // Disable Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U
+    if (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'i' || e.key === 'j')) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+    }
+    
+    // Disable Ctrl+U (View Source)
+    if (e.ctrlKey && (e.key === 'U' || e.key === 'u')) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+    }
+    
+    // Disable Ctrl+S (Save Page)
+    if (e.ctrlKey && (e.key === 'S' || e.key === 's')) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+    }
+});
+
+// Disable right-click context menu
+document.addEventListener('contextmenu', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    return false;
+});
+
+// Disable drag
+document.addEventListener('dragstart', function(e) {
+    e.preventDefault();
+    return false;
+});
+
+// Prevent selection
+document.addEventListener('selectstart', function(e) {
+    e.preventDefault();
+    return false;
+});
+
+// Prevent copy
+document.addEventListener('copy', function(e) {
+    e.preventDefault();
+    return false;
+});
+
+// Detect DevTools opening via console.log
+let devtools = /./;
+devtools.toString = function() {
+    // If devtools is open, this will trigger
+    // We'll just log a warning
+    console.warn('🔒 Developer tools are protected');
+};
+
+// ==================== VOICE RECOGNITION ====================
 function initVoice() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) {
@@ -136,7 +200,7 @@ function parseInputValue(id) {
     return parseFloat(raw) || 0;
 }
 
-// Logic 3D
+// ==================== 3D RENDERING ====================
 function draw() {
     c.width = c.offsetWidth;
     c.height = c.offsetHeight || 320;
@@ -300,7 +364,7 @@ function speak(t) {
     window.speechSynthesis.speak(u);
 }
 
-// --- FIX QUAN TRỌNG: XỬ LÝ NHẬN DIỆN ĐỘ DÀY VÀ VỊ TRÍ Y, Z ---
+// ==================== VOICE NLP PROCESSING ====================
 function processFullVoiceNLP(t) {
     if (!t || t.trim().length < 2) return;
     
@@ -317,7 +381,6 @@ function processFullVoiceNLP(t) {
 
     const findVal = (keywords) => {
         for (let kw of keywords) {
-            // Sử dụng \b (word boundary) để tránh lỗi "dài" bị trùng với "dày" trong regex
             let regex = new RegExp(`\\b${kw}\\b(?:\\s+là|\\s+bằng|\\s*[:=]|\\s+)?\\s*(-?\\d+(?:[.,]\\d+)?)`, "i");
             let match = str.match(regex);
             if (match) return cleanNumberString(match[1]);
@@ -325,13 +388,60 @@ function processFullVoiceNLP(t) {
         return null;
     };
 
-    // 1. DIMENSION (Phân biệt "chiều dài" và "chiều dày" rõ ràng)
-    // Ưu tiên cụm từ 2 từ trước để không bị trùng.
+    // Check for save command
+    if (str.match(/lưu\s*(?:file|tài\s*liệu|máy)?|save\s*/i) || str.match(/xuất\s*file/i)) {
+        autoSaveDialog();
+        log("💾 Đang mở hộp thoại lưu file", 'assistant');
+        speak("Đang mở hộp thoại lưu file");
+        return;
+    }
+
+    // Check if it's a search command
+    if (str.match(/tìm\s*(?:kiếm|thử|tài\s*liệu|thông\s*tin)\s*/i) || str.match(/search\s*/i)) {
+        let searchQuery = str.replace(/tìm\s*(?:kiếm|thử|tài\s*liệu|thông\s*tin)\s*/i, '').trim();
+        searchQuery = searchQuery.replace(/(cho\s*tôi|giúp\s*tôi|hãy|xin\s*hãy)/gi, '').trim();
+        
+        if (searchQuery && searchQuery.length > 1) {
+            document.getElementById('searchQuery').value = searchQuery;
+            searchDocuments();
+            log(`🔍 Voice: Tìm kiếm "${searchQuery}"`, 'user');
+            speak(`Đang tìm kiếm "${searchQuery}"`);
+            const modal = document.getElementById('libraryModal');
+            if (!modal.classList.contains('active')) {
+                openLibrary();
+            }
+            updatedCount++;
+        } else {
+            speak("Vui lòng nói nội dung cần tìm");
+            log("🗣️ Vui lòng nói nội dung cần tìm", 'assistant');
+        }
+        return;
+    }
+
+    // Check if it's an open document command
+    if (str.match(/mở\s*(?:tài\s*liệu|file|document|doc|văn\s*bản)\s*/i) || str.match(/open\s*/i)) {
+        let docName = str.replace(/mở\s*(?:tài\s*liệu|file|document|doc|văn\s*bản)\s*/i, '').trim();
+        docName = docName.replace(/(cho\s*tôi|giúp\s*tôi|hãy|xin\s*hãy)/gi, '').trim();
+        
+        if (docName && docName.length > 1) {
+            if (searchAndOpenDocument(docName)) {
+                updatedCount++;
+            } else {
+                speak(`Không tìm thấy tài liệu "${docName}" trong thư viện`);
+                log(`❌ Không tìm thấy tài liệu: ${docName}`, 'assistant');
+            }
+        } else {
+            speak("Vui lòng nói tên tài liệu cần mở");
+            log("🗣️ Vui lòng nói tên tài liệu cần mở", 'assistant');
+        }
+        return;
+    }
+
+    // 1. DIMENSION
     let len = findVal(["chiều dài", "độ dài", "length"]);
     let wid = findVal(["chiều rộng", "độ rộng", "width"]);
     let hei = findVal(["chiều dày", "độ dày", "thickness"]); 
 
-    // Fallback cho "dài", "rộng", "dày" nếu câu nói ngắn gọn
     if (len === null) len = findVal(["dài"]);
     if (wid === null) wid = findVal(["rộng"]);
     if (hei === null) hei = findVal(["dày", "chiều cao", "cao", "height"]);
@@ -340,12 +450,11 @@ function processFullVoiceNLP(t) {
     if (wid !== null) { document.getElementById("dy").value = wid; updatedCount++; }
     if (hei !== null) { document.getElementById("dz").value = hei; updatedCount++; }
 
-    // 2. POSITION (Bắt đúng Y, Z)
+    // 2. POSITION
     let posX = findVal(["vị trí x", "pos x", "tọa độ x", "position x"]);
     let posY = findVal(["vị trí y", "pos y", "tọa độ y", "position y"]);
     let posZ = findVal(["vị trí z", "pos z", "tọa độ z", "position z"]);
 
-    // Fallback cho "x 10 y 20 z 30" nếu câu nói không có chữ "vị trí"
     const getCoord = (axis) => {
         let regex = new RegExp(`(?:^|\\s|,)${axis}\\s*(-?\\d+(?:[.,]\\d+)?)`, "i");
         let match = str.match(regex);
@@ -382,10 +491,8 @@ function processFullVoiceNLP(t) {
         log("🤖 " + msg, 'assistant');
         speak(msg);
         
-        // Tự động mở hộp thoại lưu sau khi nhận đủ dữ liệu
         autoSaveDialog();
     } else {
-        // Fallback cuối cùng: Nếu không khớp từ khóa nào, thử bắt 3 số liên tiếp trong câu
         let rawNums = str.match(/\d+([.,]\d+)?/g);
         if (rawNums && rawNums.length >= 3) {
             document.getElementById("dx").value = cleanNumberString(rawNums[0]);
@@ -396,6 +503,21 @@ function processFullVoiceNLP(t) {
             log("🤖 Đã nhận dạng số liệu theo thứ tự (Dài, Rộng, Dày)", 'assistant');
             autoSaveDialog();
         } else {
+            // Check if it might be a search query
+            if (str.length > 3) {
+                const searchResults = performSmartSearch(str);
+                if (searchResults.length > 0) {
+                    log(`🔍 Tìm thấy ${searchResults.length} tài liệu liên quan đến "${str}"`, 'system');
+                    speak(`Tìm thấy ${searchResults.length} tài liệu liên quan`);
+                    const modal = document.getElementById('libraryModal');
+                    if (!modal.classList.contains('active')) {
+                        openLibrary();
+                    }
+                    document.getElementById('searchQuery').value = str;
+                    searchDocuments();
+                    return;
+                }
+            }
             const msg = "⚠️ Chưa nhận diện được thông số, vui lòng nói rõ hơn!";
             log("🤖 " + msg, 'assistant');
             speak(msg);
@@ -403,7 +525,7 @@ function processFullVoiceNLP(t) {
     }
 }
 
-// --- LOGIC AUTO SAVE ---
+// ==================== AUTO SAVE ====================
 function autoSaveDialog() {
     if (hasAutoTriggeredSave) return;
 
@@ -438,7 +560,7 @@ function confirmSave() {
     closeSaveDialog();
 }
 
-// --- SAVE LOGIC ---
+// ==================== SAVE LOGIC ====================
 function saveFile() {
     const fileName = document.getElementById('saveFileName').value.trim() || "Opening";
     generateAndDownloadFile(fileName);
@@ -451,7 +573,7 @@ function generateAndDownloadFile(fileName) {
 
     let L = parseInputValue("dx");
     let W = parseInputValue("dy");
-    let H = parseInputValue("dz"); // Thickness = Height in MAC
+    let H = parseInputValue("dz");
 
     let r1 = parseInputValue("r1"); let r2 = parseInputValue("r2");
     let r3 = parseInputValue("r3"); let r4 = parseInputValue("r4");
@@ -531,7 +653,7 @@ function reset() {
     speak("Đã reset về mặc định");
 }
 
-// Help & Modal Functions
+// ==================== HELP ====================
 function help() {
     const modal = document.getElementById('helpModal');
     if (modal) {
@@ -549,26 +671,344 @@ function closeHelp() {
     }
 }
 
-// Modals Click Outside
+// ==================== LIBRARY SYSTEM ====================
+let library = [];
+let isLibraryVoiceListening = false;
+let libraryVoiceRecognition = null;
+
+function loadLibrary() {
+    try {
+        const data = localStorage.getItem('opening_library');
+        if (data) {
+            library = JSON.parse(data);
+        } else {
+            library = [
+                { 
+                    name: 'Mẫu cửa sổ 1', 
+                    link: 'https://drive.google.com/file/d/example1/view',
+                    tags: ['cửa sổ', 'mẫu 1', 'window', 'phòng khách']
+                },
+                { 
+                    name: 'Mẫu cửa sổ 2', 
+                    link: 'https://drive.google.com/file/d/example2/view',
+                    tags: ['cửa sổ', 'mẫu 2', 'window', 'phòng ngủ']
+                },
+                { 
+                    name: 'Mẫu cửa chính', 
+                    link: 'https://drive.google.com/file/d/example3/view',
+                    tags: ['cửa chính', 'main door', 'phòng khách', 'lối vào']
+                },
+                { 
+                    name: 'Cửa sổ phòng khách hiện đại', 
+                    link: 'https://drive.google.com/file/d/example4/view',
+                    tags: ['cửa sổ', 'phòng khách', 'hiện đại', 'modern']
+                }
+            ];
+            saveLibrary();
+        }
+    } catch(e) {
+        library = [];
+    }
+    renderLibrary();
+}
+
+function saveLibrary() {
+    try {
+        localStorage.setItem('opening_library', JSON.stringify(library));
+    } catch(e) {}
+}
+
+function renderLibrary(filteredList = null) {
+    const list = document.getElementById('libraryList');
+    if (!list) return;
+    
+    const docs = filteredList || library;
+    
+    if (docs.length === 0) {
+        list.innerHTML = `<div style="text-align: center; color: rgba(255,255,255,0.4); padding: 30px 0;">📭 Không tìm thấy tài liệu nào</div>`;
+        return;
+    }
+    
+    list.innerHTML = docs.map((doc, index) => {
+        const originalIndex = library.indexOf(doc);
+        const tagsHtml = doc.tags && doc.tags.length > 0 
+            ? `<div style="display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px;">
+                ${doc.tags.map(tag => `<span style="background: rgba(108,92,231,0.2); color: #a29bfe; padding: 2px 8px; border-radius: 4px; font-size: 10px;">#${tag}</span>`).join('')}
+               </div>`
+            : '';
+        
+        return `
+        <div class="library-item" style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: rgba(255,255,255,0.03); border-radius: 10px; margin-bottom: 8px; border: 1px solid rgba(255,255,255,0.05); transition: all 0.2s;">
+            <span style="font-size: 20px;">📄</span>
+            <div style="flex: 1; min-width: 0;">
+                <div style="font-weight: 600; color: #fff; font-size: 14px;">${doc.name}</div>
+                <div style="font-size: 11px; color: rgba(255,255,255,0.4); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${doc.link}</div>
+                ${tagsHtml}
+            </div>
+            <button onclick="openDocument(${originalIndex})" class="btn btn-primary" style="flex: none; padding: 0 16px; height: 32px; font-size: 11px;">📂 Mở</button>
+            <button onclick="deleteDocument(${originalIndex})" class="btn btn-reset" style="flex: none; padding: 0 12px; height: 32px; font-size: 11px; background: rgba(255,0,0,0.2);">✕</button>
+        </div>
+    `}).join('');
+}
+
+function addDocument() {
+    const nameInput = document.getElementById('newDocName');
+    const linkInput = document.getElementById('newDocLink');
+    const tagsInput = document.getElementById('newDocTags');
+    const name = nameInput.value.trim();
+    const link = linkInput.value.trim();
+    const tags = tagsInput.value.trim().split(',').map(t => t.trim()).filter(t => t);
+    
+    if (!name) {
+        log("⚠️ Vui lòng nhập tên tài liệu", 'system');
+        return;
+    }
+    if (!link) {
+        log("⚠️ Vui lòng nhập link Drive hoặc mô tả", 'system');
+        return;
+    }
+    
+    library.push({ name, link, tags });
+    saveLibrary();
+    renderLibrary();
+    nameInput.value = '';
+    linkInput.value = '';
+    tagsInput.value = '';
+    log(`📚 Đã thêm tài liệu: ${name}`, 'system');
+}
+
+function deleteDocument(index) {
+    const doc = library[index];
+    if (confirm(`Xóa tài liệu "${doc.name}"?`)) {
+        library.splice(index, 1);
+        saveLibrary();
+        renderLibrary();
+        log(`🗑️ Đã xóa: ${doc.name}`, 'system');
+    }
+}
+
+function openDocument(index) {
+    const doc = library[index];
+    if (doc && doc.link) {
+        if (doc.link.startsWith('http://') || doc.link.startsWith('https://')) {
+            window.open(doc.link, '_blank');
+        } else {
+            log(`📄 Thông tin: ${doc.link}`, 'system');
+            speak(`Đã tìm thấy thông tin về ${doc.name}`);
+        }
+        log(`📂 Đang mở: ${doc.name}`, 'system');
+    }
+}
+
+function openLibrary() {
+    const modal = document.getElementById('libraryModal');
+    if (modal) {
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+        renderLibrary();
+        document.getElementById('searchQuery').value = '';
+        document.getElementById('searchResults').style.display = 'none';
+    }
+}
+
+function closeLibrary() {
+    const modal = document.getElementById('libraryModal');
+    if (modal) {
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+        stopLibraryVoice();
+    }
+}
+
+// ==================== SMART SEARCH ====================
+function searchDocuments() {
+    const query = document.getElementById('searchQuery').value.trim();
+    if (!query) {
+        renderLibrary();
+        document.getElementById('searchResults').style.display = 'none';
+        return;
+    }
+    
+    const results = performSmartSearch(query);
+    const resultsDiv = document.getElementById('searchResults');
+    
+    if (results.length === 0) {
+        resultsDiv.style.display = 'block';
+        resultsDiv.innerHTML = `<div style="text-align: center; color: rgba(255,255,255,0.5); padding: 15px 0;">
+            🔍 Không tìm thấy tài liệu phù hợp với "${query}"
+            <br><span style="font-size: 12px;">Gợi ý: Thử tìm với từ khóa khác hoặc thêm tài liệu mới</span>
+        </div>`;
+        renderLibrary();
+        return;
+    }
+    
+    resultsDiv.style.display = 'block';
+    resultsDiv.innerHTML = `<div style="color: rgba(255,255,255,0.6); font-size: 12px; margin-bottom: 8px;">
+        ✅ Tìm thấy ${results.length} kết quả cho "${query}"
+    </div>`;
+    
+    renderLibrary(results);
+}
+
+function performSmartSearch(query) {
+    const q = query.toLowerCase().trim();
+    const words = q.split(/\s+/);
+    
+    const scored = library.map(doc => {
+        let score = 0;
+        const docName = doc.name.toLowerCase();
+        const docTags = doc.tags ? doc.tags.map(t => t.toLowerCase()) : [];
+        
+        if (docName === q) score += 100;
+        if (docName.includes(q)) score += 50;
+        
+        for (const word of words) {
+            if (docName.includes(word)) score += 20;
+            for (const tag of docTags) {
+                if (tag.includes(word) || word.includes(tag)) score += 30;
+            }
+            const tagMatch = docTags.some(tag => tag.includes(word) || word.includes(tag));
+            if (tagMatch) score += 25;
+        }
+        
+        const matchCount = words.filter(w => docName.includes(w)).length;
+        if (matchCount > 1) score += matchCount * 15;
+        
+        return { doc, score };
+    });
+    
+    const results = scored
+        .filter(item => item.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .map(item => item.doc);
+    
+    return results;
+}
+
+// ==================== LIBRARY VOICE SEARCH ====================
+function voiceSearchLibrary() {
+    if (isLibraryVoiceListening) {
+        stopLibraryVoice();
+        return;
+    }
+    
+    if (!libraryVoiceRecognition) {
+        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SR) {
+            log("❌ Trình duyệt không hỗ trợ Voice", 'system');
+            return;
+        }
+        
+        libraryVoiceRecognition = new SR();
+        libraryVoiceRecognition.lang = "vi-VN";
+        libraryVoiceRecognition.continuous = false;
+        libraryVoiceRecognition.interimResults = true;
+        
+        libraryVoiceRecognition.onstart = () => {
+            isLibraryVoiceListening = true;
+            document.getElementById('voiceSearchBtn').classList.add('listening');
+            document.getElementById('voiceSearchBtn').innerHTML = '<span class="btn-icon">⏹</span> Dừng';
+            log("🎤 Đang lắng nghe câu hỏi tìm kiếm...", 'system');
+        };
+        
+        libraryVoiceRecognition.onend = () => {
+            stopLibraryVoice();
+        };
+        
+        libraryVoiceRecognition.onerror = (e) => {
+            if (e.error !== 'no-speech') {
+                log(`⚠️ Lỗi: ${e.error}`, 'system');
+            }
+            stopLibraryVoice();
+        };
+        
+        libraryVoiceRecognition.onresult = (e) => {
+            let transcript = '';
+            for (let i = e.resultIndex; i < e.results.length; i++) {
+                transcript += e.results[i][0].transcript;
+                if (e.results[i].isFinal) {
+                    document.getElementById('searchQuery').value = transcript;
+                    searchDocuments();
+                    stopLibraryVoice();
+                    log(`🔍 Voice: "${transcript}"`, 'user');
+                    speak(`Đã tìm kiếm "${transcript}"`);
+                }
+            }
+        };
+    }
+    
+    try {
+        libraryVoiceRecognition.start();
+    } catch(e) {
+        try { libraryVoiceRecognition.stop(); setTimeout(() => { libraryVoiceRecognition.start(); }, 300); } catch(e2) {}
+    }
+}
+
+function stopLibraryVoice() {
+    isLibraryVoiceListening = false;
+    if (libraryVoiceRecognition) {
+        try { libraryVoiceRecognition.stop(); } catch(e) {}
+    }
+    const btn = document.getElementById('voiceSearchBtn');
+    if (btn) {
+        btn.classList.remove('listening');
+        btn.innerHTML = '<span class="btn-icon">🎤</span> Voice';
+    }
+}
+
+function searchAndOpenDocument(name) {
+    if (!name || name.trim().length < 2) return false;
+    
+    const results = performSmartSearch(name);
+    
+    if (results.length > 0) {
+        const bestMatch = results[0];
+        if (bestMatch.link) {
+            if (bestMatch.link.startsWith('http://') || bestMatch.link.startsWith('https://')) {
+                window.open(bestMatch.link, '_blank');
+            } else {
+                log(`📄 Thông tin: ${bestMatch.link}`, 'system');
+            }
+            log(`📂 Voice: Đã mở tài liệu "${bestMatch.name}"`, 'assistant');
+            speak(`Đã mở tài liệu ${bestMatch.name}`);
+            return true;
+        }
+    }
+    
+    return false;
+}
+
+// ==================== EVENT LISTENERS ====================
 document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.modal-overlay').forEach(modal => {
         modal.addEventListener('click', function(e) {
             if (e.target === this) {
                 if(this.id === 'helpModal') closeHelp();
                 if(this.id === 'saveModal') closeSaveDialog();
+                if(this.id === 'libraryModal') closeLibrary();
             }
         });
     });
+    
+    loadLibrary();
 });
 
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         closeHelp();
         closeSaveDialog();
+        closeLibrary();
+    }
+    
+    // Enter key for search
+    if (e.key === 'Enter' && document.getElementById('libraryModal').classList.contains('active')) {
+        const searchInput = document.getElementById('searchQuery');
+        if (document.activeElement === searchInput) {
+            searchDocuments();
+        }
     }
 });
 
-// Input listeners realtime
 document.querySelectorAll("input").forEach(i => {
     i.addEventListener("input", () => {
         hasAutoTriggeredSave = false; 
@@ -578,7 +1018,9 @@ document.querySelectorAll("input").forEach(i => {
 
 window.addEventListener("resize", draw);
 
-// Auto-start draw
+// ==================== STARTUP ====================
 draw();
 log("🚀 3D Opening Tool Pro ready", 'system');
 log("💡 Nhấn nút Voice và nói (VD: chiều dài 2000, chiều rộng 5000, chiều dày 300)", 'system');
+log("📚 Nhấn nút Library để quản lý tài liệu Drive", 'system');
+log("🔒 Bảo mật đã được kích hoạt (F12 đã bị vô hiệu hóa)", 'system');
