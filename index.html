@@ -331,7 +331,7 @@
                 <div class="help-category warning">
                     <h3>⚠️ Important Notes</h3>
                     <ul class="help-notes">
-                        <li>📌 Library data is stored in <strong>localStorage</strong>. Clearing cache will lose data.</li>
+                        <li>📌 Library data is stored in <strong>localStorage</strong> and synced with <strong>Google Sheets</strong>.</li>
                         <li>📌 <strong>Microphone</strong> permission is required for Voice features.</li>
                         <li>📌 Exported files have <strong>.mac</strong> format.</li>
                         <li>📌 Measurement unit is <strong>mm</strong>.</li>
@@ -379,6 +379,13 @@
             <button class="modal-close" onclick="closeLibrary()">✕</button>
         </div>
         <div class="modal-body">
+            <!-- Sync Status -->
+            <div id="syncStatus" style="margin-bottom: 12px; padding: 8px 12px; background: rgba(0,210,255,0.05); border: 1px solid rgba(0,210,255,0.1); border-radius: 8px; display: flex; align-items: center; gap: 8px;">
+                <span id="syncIcon" style="font-size: 16px;">🔄</span>
+                <span id="syncText" style="color: rgba(255,255,255,0.7); font-size: 12px;">Syncing with Google Sheets...</span>
+                <button onclick="syncWithGoogleSheets()" class="btn btn-primary" style="flex: none; padding: 0 12px; height: 28px; font-size: 10px; margin-left: auto;">🔄 Sync Now</button>
+            </div>
+
             <!-- Search Section -->
             <div style="margin-bottom: 16px; background: rgba(255,255,255,0.03); border-radius: 12px; padding: 14px; border: 1px solid rgba(255,255,255,0.06);">
                 <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
@@ -405,7 +412,7 @@
             </div>
 
             <!-- Document List -->
-            <div id="libraryList" style="max-height: 280px; overflow-y: auto;">
+            <div id="libraryList" style="max-height: 250px; overflow-y: auto;">
                 <!-- Documents rendered here -->
             </div>
         </div>
