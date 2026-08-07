@@ -346,30 +346,6 @@ input[type=number] { -moz-appearance: textfield !important; }
 .modal-footer { padding: 12px 20px 16px; border-top: 1px solid rgba(255,255,255,0.06); display: flex; justify-content: flex-end; gap: 10px; }
 .modal-footer .btn { flex: none; padding: 0 30px; height: 40px; font-size: 14px; }
 
-/* ==================== PASSWORD MODAL ==================== */
-#passwordModal {
-    animation: fadeIn 0.3s ease;
-}
-
-#passwordModal input:focus {
-    border-color: #6c5ce7 !important;
-    box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.2) !important;
-}
-
-#passwordModal .btn:hover {
-    transform: translateY(-1px);
-}
-
-#passwordModal .btn:active {
-    transform: scale(0.96);
-}
-
-.library-item .btn-reset:hover {
-    background: rgba(255,0,0,0.4) !important;
-    transform: scale(1.05);
-}
-
-/* ==================== LIBRARY SEARCH ANIMATION ==================== */
 .library-item {
     transition: all 0.3s ease;
 }
