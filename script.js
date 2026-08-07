@@ -22,13 +22,16 @@ async function syncWithGoogleSheets() {
     updateSyncStatus('syncing', 'Loading data...');
     
     try {
-        // Sử dụng fetch với mode 'cors' và cache 'no-cache'
-        const response = await fetch(`${API_URL}?action=get`, {
+        // Thêm timestamp để tránh cache
+        const url = `${API_URL}?action=get&t=${Date.now()}`;
+        
+        const response = await fetch(url, {
             method: 'GET',
             mode: 'cors',
             cache: 'no-cache',
             headers: {
                 'Content-Type': 'application/json',
+                'Accept': 'application/json'
             }
         });
         
@@ -54,9 +57,15 @@ async function syncWithGoogleSheets() {
         console.error('Sync error:', error);
         log('⚠️ Cannot connect to Google Sheets. Please check your connection.', 'system');
         updateSyncStatus('error', 'Connection error');
-        // Nếu không có dữ liệu, hiển thị thông báo trống
+        // Hiển thị thông báo lỗi rõ ràng
+        const list = document.getElementById('libraryList');
+        if (list) {
+            list.innerHTML = `<div style="text-align: center; color: rgba(255,255,255,0.5); padding: 30px 0;">
+                ❌ Cannot connect to Google Sheets
+                <br><span style="font-size: 12px;">Please check your internet connection</span>
+            </div>`;
+        }
         library = [];
-        renderLibrary();
     } finally {
         isSyncing = false;
     }
@@ -879,7 +888,10 @@ async function addDocument() {
     }
 }
 
-// ==================== DELETE DOCUMENT WITH PASSWORD ====================
+// ==================== DELETE DOCUMENT WITH PASSWORD (SECURE) ====================
+// Password được lưu trong biến này, không hiển thị ở bất kỳ đâu
+const DELETE_PASSWORD = 'admin123';
+
 function showDeletePassword(index) {
     deleteTargetIndex = index;
     const doc = library[index];
@@ -889,7 +901,7 @@ function showDeletePassword(index) {
         return;
     }
     
-    // Tạo modal nhập password (không hiển thị gợi ý)
+    // Tạo modal nhập password (không hiển thị gợi ý password)
     const passwordModal = document.createElement('div');
     passwordModal.id = 'passwordModal';
     passwordModal.style.cssText = `
@@ -922,6 +934,7 @@ function showDeletePassword(index) {
     `;
     document.body.appendChild(passwordModal);
     
+    // Focus vào input
     setTimeout(() => {
         const input = document.getElementById('deletePasswordInput');
         if (input) input.focus();
@@ -940,9 +953,7 @@ async function confirmDeleteWithPassword() {
     const errorDiv = document.getElementById('passwordError');
     
     // So sánh với password cố định (không hiển thị ở đâu)
-    const CORRECT_PASSWORD = 'admin123';
-    
-    if (password === CORRECT_PASSWORD) {
+    if (password === DELETE_PASSWORD) {
         if (deleteTargetIndex !== null && deleteTargetIndex < library.length) {
             const doc = library[deleteTargetIndex];
             
@@ -976,6 +987,7 @@ async function confirmDeleteWithPassword() {
             closePasswordModal();
         }
     } else {
+        // Sai password - hiển thị lỗi
         if (errorDiv) {
             errorDiv.style.display = 'block';
             errorDiv.textContent = '❌ Incorrect password! Please try again.';
@@ -985,7 +997,9 @@ async function confirmDeleteWithPassword() {
             passwordInput.focus();
             passwordInput.style.borderColor = '#ff7675';
             setTimeout(() => {
-                passwordInput.style.borderColor = 'rgba(255,255,255,0.1)';
+                if (passwordInput) {
+                    passwordInput.style.borderColor = 'rgba(255,255,255,0.1)';
+                }
             }, 2000);
         }
         log(`❌ Delete failed: Incorrect password`, 'system');
@@ -1017,6 +1031,8 @@ function openLibrary() {
         document.getElementById('searchQuery').value = '';
         document.getElementById('searchResults').style.display = 'none';
         log("📚 Library opened", 'system');
+        // Refresh dữ liệu khi mở Library
+        syncWithGoogleSheets();
     }
 }
 
