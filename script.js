@@ -10,7 +10,7 @@ let isSpeaking = false;
 let hasAutoTriggeredSave = false;
 
 // ==================== GOOGLE SHEETS CONFIGURATION ====================
-const API_URL = 'https://script.google.com/macros/s/AKfycbzvZOGfd1gOoJItPVu_LhaeGUUlo4gBPsgvaNDYOJoFmMGh-O5cD5hzAfrFVB3xg5bNpA/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbygrjW8Pqz0QDl0gBhwpUkG8zFt-je4pVvXADNOzAzN91HR_cEf3lqhrxnbdM6rjK_8BA/exec';
 let isSyncing = false;
 let library = [];
 let deleteTargetIndex = null;
