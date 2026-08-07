@@ -10,9 +10,9 @@ let isSpeaking = false;
 let hasAutoTriggeredSave = false;
 
 // ==================== GOOGLE FORM CONFIGURATION ====================
-// Thay thế bằng URL Google Form của bạn (lấy từ form's action URL)
-const GOOGLE_FORM_URL = 'https://docs.google.com/forms/d/e/YOUR_FORM_ID/formResponse';
-const GOOGLE_SHEETS_DATA_URL = 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec'; // Vẫn giữ để đọc dữ liệu
+// Đã cập nhật với URL Google Apps Script của bạn
+const GOOGLE_FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSeSFgm7YG7YBJW59gwL7_UgT7II2fqhiaRF-G0HQ2hwrg-DUw/formResponse';
+const GOOGLE_SHEETS_DATA_URL = 'https://script.google.com/macros/s/AKfycbw0JLIGDlDFTREiCQdwIPK8tx5KRAiFBFFp4-Gf67mdMDC5MIf8gGi9sVRZQ2S9jy_V/exec';
 
 let isSyncing = false;
 let library = [];
@@ -75,33 +75,20 @@ async function syncWithGoogleSheets() {
 // ==================== GOOGLE FORM - ADD DOCUMENT ====================
 async function addDocumentToGoogleSheets(doc) {
     try {
-        // Tạo FormData để gửi đến Google Form
         const formData = new FormData();
         
-        // Map các trường với entry ID của Google Form
-        // Bạn cần thay thế các entry ID này bằng ID thực tế từ Google Form của bạn
-        // Lấy từ inspect element của form: name="entry.XXXXXXXX"
-        formData.append('entry.123456789', doc.name); // Thay bằng entry ID của trường Name
-        formData.append('entry.987654321', doc.link); // Thay bằng entry ID của trường Link
-        formData.append('entry.456789123', doc.tags ? doc.tags.join(', ') : ''); // Thay bằng entry ID của trường Tags
+        // Entry ID từ form của bạn
+        formData.append('entry.602500005', doc.name);     // Document Name
+        formData.append('entry.970179045', doc.link);     // Drive Link
+        formData.append('entry.2136251389', doc.tags ? doc.tags.join(', ') : ''); // Tags
         
-        // Gửi đến Google Form
         const response = await fetch(GOOGLE_FORM_URL, {
             method: 'POST',
-            mode: 'no-cors', // Quan trọng: Google Form yêu cầu no-cors
+            mode: 'no-cors',
             cache: 'no-cache',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: new URLSearchParams({
-                'entry.123456789': doc.name,
-                'entry.987654321': doc.link,
-                'entry.456789123': doc.tags ? doc.tags.join(', ') : ''
-            })
+            body: formData
         });
         
-        // Với no-cors, response không thể đọc được nhưng thường là thành công
-        // Chúng ta vẫn coi là thành công
         log(`📤 Document submitted to Google Form: ${doc.name}`, 'system');
         return true;
         
@@ -112,11 +99,8 @@ async function addDocumentToGoogleSheets(doc) {
 }
 
 // ==================== GOOGLE FORM - DELETE DOCUMENT ====================
-// Lưu ý: Xóa qua Google Form không được hỗ trợ trực tiếp
-// Cần phải xóa thủ công trên Google Sheets hoặc sử dụng Google Apps Script
 async function deleteDocumentFromGoogleSheets(index) {
     try {
-        // Vì Google Form không hỗ trợ xóa, chúng ta gọi trực tiếp đến Google Apps Script
         const formData = new FormData();
         formData.append('action', 'delete');
         formData.append('index', index);
@@ -1238,28 +1222,18 @@ function searchAndOpenDocument(name) {
 function showGoogleFormGuide() {
     alert(`📋 GOOGLE FORM CONFIGURATION GUIDE
 
-1. Tạo một Google Form mới với 3 trường:
-   - Name (Text)
-   - Link (Text) 
-   - Tags (Text)
+✅ Form của bạn đã được cấu hình với Entry ID:
+- Document Name: entry.602500005
+- Drive Link: entry.970179045
+- Tags: entry.2136251389
 
-2. Mở Form, click "Send" → "Get pre-filled link"
+✅ Google Apps Script URL:
+${GOOGLE_SHEETS_DATA_URL}
 
-3. Điền dữ liệu mẫu và lấy link
-
-4. Tìm entry ID trong URL:
-   https://docs.google.com/forms/d/e/.../viewform?entry.123456789=value
-
-5. Cập nhật các entry ID trong file script.js:
-   - entry.123456789 → entry ID của trường Name
-   - entry.987654321 → entry ID của trường Link  
-   - entry.456789123 → entry ID của trường Tags
-
-6. Cập nhật GOOGLE_FORM_URL với URL Form của bạn
-
-💡 Tips:
-- Xóa document vẫn cần Google Apps Script
-- Đảm bảo Form ở chế độ public (anyone can respond)
+📌 Lưu ý:
+- Dữ liệu sẽ được gửi qua Google Form
+- Dữ liệu được đọc từ Google Sheets qua Apps Script
+- Kiểm tra trong Google Sheets để xác nhận
 `);
 }
 
@@ -1333,3 +1307,5 @@ log("🚀 3D Opening Tool Pro ready", 'system');
 log("💡 Press Voice button and speak (e.g.: length 2000, width 1500, thickness 300)", 'system');
 log("📚 Press Library button to manage Drive documents", 'system');
 log("📤 Documents are submitted via Google Form", 'system');
+log("✅ Form Entry IDs: Name=602500005, Link=970179045, Tags=2136251389", 'system');
+log("✅ Apps Script URL: " + GOOGLE_SHEETS_DATA_URL, 'system');
