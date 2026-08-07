@@ -12,7 +12,9 @@ let hasAutoTriggeredSave = false;
 // ==================== GOOGLE FORM CONFIGURATION ====================
 // Đã cập nhật với URL Google Apps Script của bạn
 const GOOGLE_FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSeSFgm7YG7YBJW59gwL7_UgT7II2fqhiaRF-G0HQ2hwrg-DUw/formResponse';
-const GOOGLE_SHEETS_DATA_URL = 'https://script.google.com/macros/s/AKfycbw0JLIGDlDFTREiCQdwIPK8tx5KRAiFBFFp4-Gf67mdMDC5MIf8gGi9sVRZQ2S9jy_V/exec';
+const GOOGLE_SHEETS_DATA_URL = 'https://script.google.com/macros/s/AKfycbzCgMn2i3GE0lj8lklk3r11PAfKBpG1_kq2LdGavt-ug7Zb8hLK0yBizemJHng4en5y/exec';
+
+
 
 let isSyncing = false;
 let library = [];
