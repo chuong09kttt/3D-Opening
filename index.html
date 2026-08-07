@@ -331,7 +331,7 @@
                 <div class="help-category warning">
                     <h3>⚠️ Important Notes</h3>
                     <ul class="help-notes">
-                        <li>📌 Library data is stored in <strong>localStorage</strong> and synced with <strong>Google Sheets</strong>.</li>
+                        <li>📌 Library data is stored in <strong>Google Sheets</strong> (cloud).</li>
                         <li>📌 <strong>Microphone</strong> permission is required for Voice features.</li>
                         <li>📌 Exported files have <strong>.mac</strong> format.</li>
                         <li>📌 Measurement unit is <strong>mm</strong>.</li>
@@ -382,8 +382,8 @@
             <!-- Sync Status -->
             <div id="syncStatus" style="margin-bottom: 12px; padding: 8px 12px; background: rgba(0,210,255,0.05); border: 1px solid rgba(0,210,255,0.1); border-radius: 8px; display: flex; align-items: center; gap: 8px;">
                 <span id="syncIcon" style="font-size: 16px;">🔄</span>
-                <span id="syncText" style="color: rgba(255,255,255,0.7); font-size: 12px;">Syncing with Google Sheets...</span>
-                <button onclick="syncWithGoogleSheets()" class="btn btn-primary" style="flex: none; padding: 0 12px; height: 28px; font-size: 10px; margin-left: auto;">🔄 Sync Now</button>
+                <span id="syncText" style="color: rgba(255,255,255,0.7); font-size: 12px;">Loading data...</span>
+                <button onclick="syncWithGoogleSheets()" class="btn btn-primary" style="flex: none; padding: 0 12px; height: 28px; font-size: 10px; margin-left: auto;">🔄 Refresh</button>
             </div>
 
             <!-- Search Section -->
