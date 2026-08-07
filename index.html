@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -177,181 +177,171 @@
         <div class="modal-header">
             <div class="modal-title">
                 <span class="modal-icon">📖</span>
-                <h2>Hướng Dẫn Sử Dụng Chi Tiết</h2>
+                <h2>User Guide</h2>
             </div>
             <button class="modal-close" onclick="closeHelp()">✕</button>
         </div>
         <div class="modal-body">
             <div class="help-section">
                 <div class="help-category">
-                    <h3>🌟 Giới Thiệu</h3>
-                    <p>3D Opening Tool Pro là công cụ hỗ trợ thiết kế và xuất file MAC cho các loại cửa, ô thoáng trong kiến trúc. Ứng dụng cho phép bạn trực quan hóa mô hình 3D và xuất file với các thông số kỹ thuật chính xác.</p>
+                    <h3>🌟 Introduction</h3>
+                    <p>3D Opening Tool Pro is a design tool for creating and exporting MAC files for architectural openings. The application allows you to visualize 3D models and export files with precise technical specifications.</p>
                 </div>
 
                 <div class="help-category">
-                    <h3>📐 1. Nhập Thông Số Kỹ Thuật</h3>
+                    <h3>📐 1. Technical Specifications</h3>
                     <div class="help-grid">
                         <div class="help-item">
                             <span class="help-icon">📏</span>
                             <div>
-                                <strong>Dimension (Kích thước)</strong>
-                                <p>Nhập <strong>Length (Dài)</strong>, <strong>Width (Rộng)</strong>, <strong>Thickness (Dày)</strong> theo đơn vị mm. Model 3D sẽ tự động cập nhật theo thời gian thực.</p>
+                                <strong>Dimension</strong>
+                                <p>Enter <strong>Length</strong>, <strong>Width</strong>, and <strong>Thickness</strong> in mm. The 3D model updates in real-time.</p>
                             </div>
                         </div>
                         <div class="help-item">
                             <span class="help-icon">🔄</span>
                             <div>
-                                <strong>Orientation (Hướng)</strong>
-                                <p>Chọn trục chính cho Opening: <strong>X</strong>, <strong>Y</strong>, hoặc <strong>Z</strong>. Model sẽ xoay tương ứng với hướng đã chọn.</p>
+                                <strong>Orientation</strong>
+                                <p>Select the main axis: <strong>X</strong>, <strong>Y</strong>, or <strong>Z</strong>. The model rotates accordingly.</p>
                             </div>
                         </div>
                         <div class="help-item">
                             <span class="help-icon">⭕</span>
                             <div>
-                                <strong>Corner Radius (Bo góc)</strong>
-                                <p>Nhập bán kính bo góc cho từng góc <strong>R1, R2, R3, R4</strong>. Giá trị mặc định là 150mm. Có thể nhập khác nhau cho từng góc.</p>
+                                <strong>Corner Radius</strong>
+                                <p>Enter radius for each corner <strong>R1, R2, R3, R4</strong>. Default is 150mm. Each corner can have different values.</p>
                             </div>
                         </div>
                         <div class="help-item">
                             <span class="help-icon">📍</span>
                             <div>
-                                <strong>Position (Vị trí)</strong>
-                                <p>Thiết lập tọa độ <strong>X, Y, Z</strong> để định vị Opening trong không gian 3D. Giá trị mặc định là 0.</p>
+                                <strong>Position</strong>
+                                <p>Set <strong>X, Y, Z</strong> coordinates to position the opening in 3D space. Default is 0.</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <div class="help-category">
-                    <h3>🎤 2. Điều Khiển Bằng Giọng Nói</h3>
-                    <p>Nhấn nút <strong>🎤 Voice</strong> và nói các câu lệnh sau:</p>
+                    <h3>🎤 2. Voice Control</h3>
+                    <p>Press <strong>🎤 Voice</strong> and speak the following commands:</p>
                     <div class="help-commands">
                         <div class="command-item">
                             <span class="command-badge">📐</span>
-                            <code>"Chiều dài 2000, chiều rộng 1500, chiều dày 300"</code>
-                            <span class="command-desc">→ Cập nhật kích thước</span>
+                            <code>"Length 2000, width 1500, thickness 300"</code>
+                            <span class="command-desc">→ Update dimensions</span>
                         </div>
                         <div class="command-item">
                             <span class="command-badge">📍</span>
-                            <code>"Vị trí x 100, y 200, z 50"</code>
-                            <span class="command-desc">→ Cập nhật vị trí</span>
+                            <code>"Position x 100, y 200, z 50"</code>
+                            <span class="command-desc">→ Update position</span>
                         </div>
                         <div class="command-item">
                             <span class="command-badge">⭕</span>
-                            <code>"Bo góc 200"</code>
-                            <span class="command-desc">→ Cập nhật bán kính bo góc</span>
+                            <code>"Corner radius 200"</code>
+                            <span class="command-desc">→ Update corner radius</span>
                         </div>
                         <div class="command-item">
                             <span class="command-badge">🔄</span>
-                            <code>"Hướng X"</code>
-                            <span class="command-desc">→ Đổi hướng trục</span>
+                            <code>"Orientation X"</code>
+                            <span class="command-desc">→ Change axis orientation</span>
                         </div>
                         <div class="command-item">
                             <span class="command-badge">📚</span>
-                            <code>"Tìm cửa sổ phòng khách"</code>
-                            <span class="command-desc">→ Tìm kiếm và mở tài liệu đầu tiên</span>
+                            <code>"Search living room window"</code>
+                            <span class="command-desc">→ Search and open first document</span>
                         </div>
                         <div class="command-item">
                             <span class="command-badge">📂</span>
-                            <code>"Mở tài liệu cửa chính"</code>
-                            <span class="command-desc">→ Mở tài liệu từ thư viện</span>
+                            <code>"Open document main door"</code>
+                            <span class="command-desc">→ Open document from library</span>
                         </div>
                         <div class="command-item">
                             <span class="command-badge">💾</span>
-                            <code>"Lưu file"</code>
-                            <span class="command-desc">→ Mở hộp thoại xuất file</span>
-                        </div>
-                        <div class="command-item">
-                            <span class="command-badge">🇬🇧</span>
-                            <code>"Search living room window"</code>
-                            <span class="command-desc">→ Tìm kiếm và mở tài liệu (tiếng Anh)</span>
-                        </div>
-                        <div class="command-item">
-                            <span class="command-badge">🇬🇧</span>
-                            <code>"Open document main door"</code>
-                            <span class="command-desc">→ Mở tài liệu theo tên (tiếng Anh)</span>
+                            <code>"Save file"</code>
+                            <span class="command-desc">→ Open export dialog</span>
                         </div>
                     </div>
                     <div class="help-tip">
-                        💡 <strong>Mẹo:</strong> Hệ thống tự động nhận diện và cập nhật thông số sau khi bạn nói xong. Bạn có thể nói liên tục nhiều lệnh cùng lúc. Hỗ trợ cả <strong>tiếng Việt</strong> và <strong>tiếng Anh</strong>.
+                        💡 <strong>Tip:</strong> The system automatically recognizes and updates parameters after you speak. You can speak multiple commands at once. Supports both <strong>English</strong> and <strong>Vietnamese</strong>.
                     </div>
                 </div>
 
                 <div class="help-category">
-                    <h3>📚 3. Quản Lý Thư Viện Tài Liệu</h3>
+                    <h3>📚 3. Document Library</h3>
                     <div class="help-grid">
                         <div class="help-item">
                             <span class="help-icon">➕</span>
                             <div>
-                                <strong>Thêm tài liệu</strong>
-                                <p>Nhập <strong>Tên</strong>, <strong>Link Drive</strong> và <strong>Tags</strong> (cách nhau dấu phẩy) → Nhấn "Add". Tags giúp tìm kiếm chính xác hơn.</p>
-                            </div>
-                        </div>
-                        <div class="help-item">
-                            <span class="help-icon">🔒</span>
-                            <div>
-                                <strong>Bảo mật</strong>
-                                <p>Để xóa tài liệu, cần nhập <strong>mật khẩu bảo vệ</strong>. Vui lòng liên hệ quản trị viên để biết thêm chi tiết.</p>
+                                <strong>Add document</strong>
+                                <p>Enter <strong>Name</strong>, <strong>Drive Link</strong>, and <strong>Tags</strong> (comma separated) → Click "Add". Tags help with searching.</p>
                             </div>
                         </div>
                         <div class="help-item">
                             <span class="help-icon">🔍</span>
                             <div>
-                                <strong>Tìm kiếm</strong>
-                                <p>Nhập câu hỏi vào ô tìm kiếm hoặc nhấn nút <strong>Voice</strong> để tìm bằng giọng nói. Khi tìm bằng Voice, hệ thống sẽ tự động mở tài liệu đầu tiên.</p>
+                                <strong>Search</strong>
+                                <p>Enter a query in the search box or use the <strong>Voice</strong> button to search by voice.</p>
                             </div>
                         </div>
                         <div class="help-item">
                             <span class="help-icon">📂</span>
                             <div>
-                                <strong>Mở tài liệu</strong>
-                                <p>Nhấn nút <strong>Open</strong> bên cạnh tài liệu hoặc nói <strong>"Mở [tên tài liệu]"</strong>.</p>
+                                <strong>Open document</strong>
+                                <p>Click <strong>Open</strong> next to a document or say <strong>"Open [document name]"</strong>.</p>
+                            </div>
+                        </div>
+                        <div class="help-item">
+                            <span class="help-icon">🗑️</span>
+                            <div>
+                                <strong>Delete document</strong>
+                                <p>Click the delete button <strong>✕</strong> next to a document to remove it from the library.</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <div class="help-category">
-                    <h3>💾 4. Xuất File MAC</h3>
+                    <h3>💾 4. Export MAC File</h3>
                     <div class="help-grid">
                         <div class="help-item">
                             <span class="help-icon">💾</span>
                             <div>
-                                <strong>Xuất thủ công</strong>
-                                <p>Nhấn nút <strong>Export</strong> để mở hộp thoại đặt tên và tải xuống file <strong>.mac</strong>.</p>
+                                <strong>Manual Export</strong>
+                                <p>Click <strong>Export</strong> to name and download the <strong>.mac</strong> file.</p>
                             </div>
                         </div>
                         <div class="help-item">
                             <span class="help-icon">🤖</span>
                             <div>
-                                <strong>Xuất tự động</strong>
-                                <p>Sau khi nhập đủ thông số (Dài, Rộng, Dày), hệ thống tự động mở hộp thoại lưu file.</p>
+                                <strong>Auto Export</strong>
+                                <p>After entering all dimensions, the system automatically opens the save dialog.</p>
                             </div>
                         </div>
                         <div class="help-item">
                             <span class="help-icon">🎤</span>
                             <div>
-                                <strong>Xuất bằng Voice</strong>
-                                <p>Nói <strong>"Lưu file"</strong> để mở hộp thoại lưu.</p>
+                                <strong>Voice Export</strong>
+                                <p>Say <strong>"Save file"</strong> to open the save dialog.</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <div class="help-category warning">
-                    <h3>⚠️ Lưu Ý Quan Trọng</h3>
+                    <h3>⚠️ Important Notes</h3>
                     <ul class="help-notes">
-                        <li>📌 Dữ liệu thư viện được lưu trên <strong>localStorage</strong>. Xóa cache sẽ mất dữ liệu.</li>
-                        <li>📌 Cần cấp quyền <strong>Microphone</strong> để sử dụng Voice.</li>
-                        <li>📌 File xuất có định dạng <strong>.mac</strong>.</li>
-                        <li>📌 Đơn vị đo lường là <strong>mm</strong>.</li>
-                        <li>📌 Hỗ trợ cả <strong>tiếng Việt</strong> và <strong>tiếng Anh</strong> cho Voice Command.</li>
+                        <li>📌 Library data is stored in <strong>localStorage</strong>. Clearing cache will lose data.</li>
+                        <li>📌 <strong>Microphone</strong> permission is required for Voice features.</li>
+                        <li>📌 Exported files have <strong>.mac</strong> format.</li>
+                        <li>📌 Measurement unit is <strong>mm</strong>.</li>
+                        <li>📌 Supports both <strong>English</strong> and <strong>Vietnamese</strong> for Voice Commands.</li>
                     </ul>
                 </div>
             </div>
         </div>
         <div class="modal-footer">
-            <button class="btn btn-primary" onclick="closeHelp()">✅ Đã hiểu</button>
+            <button class="btn btn-primary" onclick="closeHelp()">✅ Got it</button>
         </div>
     </div>
 </div>
@@ -362,18 +352,18 @@
         <div class="modal-header">
             <div class="modal-title">
                 <span class="modal-icon">💾</span>
-                <h2>Xác nhận lưu file</h2>
+                <h2>Save File</h2>
             </div>
         </div>
         <div class="modal-body">
-            <p style="color: rgba(255,255,255,0.7); margin-bottom: 16px;">Vui lòng đặt tên cho file:</p>
+            <p style="color: rgba(255,255,255,0.7); margin-bottom: 16px;">Enter file name:</p>
             <div class="input-wrapper" style="width: 100%;">
                 <input id="saveFileName" type="text" value="Opening" style="width: 100%; height: 40px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 15px; padding: 0 14px; outline: none; font-family: 'Inter', sans-serif;">
             </div>
         </div>
         <div class="modal-footer">
-            <button class="btn btn-reset" onclick="closeSaveDialog()" style="flex: none; padding: 0 20px; background: rgba(255,255,255,0.1); box-shadow: none;">Hủy</button>
-            <button class="btn btn-primary" onclick="confirmSave()" style="flex: none; padding: 0 30px;">Tải xuống</button>
+            <button class="btn btn-reset" onclick="closeSaveDialog()" style="flex: none; padding: 0 20px; background: rgba(255,255,255,0.1); box-shadow: none;">Cancel</button>
+            <button class="btn btn-primary" onclick="confirmSave()" style="flex: none; padding: 0 30px;">Download</button>
         </div>
     </div>
 </div>
@@ -399,7 +389,7 @@
                     </button>
                 </div>
                 <div style="display: flex; gap: 10px;">
-                    <input id="searchQuery" type="text" placeholder="Enter search query (e.g.: living room window, main door...)" 
+                    <input id="searchQuery" type="text" placeholder="Search by name or tags..." 
                            style="flex: 1; height: 40px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 14px; padding: 0 14px; outline: none; font-family: 'Inter', sans-serif;">
                     <button class="btn btn-primary" onclick="searchDocuments()" style="flex: none; padding: 0 24px; height: 40px;">🔍 Search</button>
                 </div>
@@ -412,11 +402,6 @@
                 <input id="newDocLink" type="text" placeholder="Drive link..." style="flex: 2; min-width: 200px; height: 40px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 14px; padding: 0 14px; outline: none; font-family: 'Inter', sans-serif;">
                 <input id="newDocTags" type="text" placeholder="Tags (comma separated)..." style="flex: 1; min-width: 120px; height: 40px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 14px; padding: 0 14px; outline: none; font-family: 'Inter', sans-serif;">
                 <button class="btn btn-primary" onclick="addDocument()" id="addDocBtn" style="flex: none; padding: 0 20px; height: 40px;">➕ Add</button>
-            </div>
-
-            <!-- Password notice - NO PASSWORD DISPLAYED -->
-            <div style="margin-bottom: 12px; padding: 8px 12px; background: rgba(255,215,0,0.05); border: 1px solid rgba(255,215,0,0.1); border-radius: 8px;">
-                <span style="color: rgba(255,215,0,0.7); font-size: 11px;">🔒 Password required to delete documents</span>
             </div>
 
             <!-- Document List -->
