@@ -9,8 +9,11 @@ let partialTranscript = '';
 let isSpeaking = false;
 let hasAutoTriggeredSave = false;
 
-// ==================== GOOGLE SHEETS CONFIGURATION ====================
-const API_URL = 'https://script.google.com/macros/s/AKfycbxNzONDB7ipHGFaKshNWV3uiiN_RfikxPeSiQp8Dc88L78aIxXqnNL411Wd7dRSOgmuQg/exec';
+// ==================== GOOGLE FORM CONFIGURATION ====================
+// Thay thế bằng URL Google Form của bạn (lấy từ form's action URL)
+const GOOGLE_FORM_URL = 'https://docs.google.com/forms/d/e/YOUR_FORM_ID/formResponse';
+const GOOGLE_SHEETS_DATA_URL = 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec'; // Vẫn giữ để đọc dữ liệu
+
 let isSyncing = false;
 let library = [];
 let deleteTargetIndex = null;
@@ -22,8 +25,7 @@ async function syncWithGoogleSheets() {
     updateSyncStatus('syncing', 'Loading data...');
     
     try {
-        // Thêm timestamp để tránh cache
-        const url = `${API_URL}?action=get&t=${Date.now()}`;
+        const url = `${GOOGLE_SHEETS_DATA_URL}?action=get&t=${Date.now()}`;
         
         const response = await fetch(url, {
             method: 'GET',
@@ -57,7 +59,6 @@ async function syncWithGoogleSheets() {
         console.error('Sync error:', error);
         log('⚠️ Cannot connect to Google Sheets. Please check your connection.', 'system');
         updateSyncStatus('error', 'Connection error');
-        // Hiển thị thông báo lỗi rõ ràng
         const list = document.getElementById('libraryList');
         if (list) {
             list.innerHTML = `<div style="text-align: center; color: rgba(255,255,255,0.5); padding: 30px 0;">
@@ -71,42 +72,56 @@ async function syncWithGoogleSheets() {
     }
 }
 
+// ==================== GOOGLE FORM - ADD DOCUMENT ====================
 async function addDocumentToGoogleSheets(doc) {
     try {
+        // Tạo FormData để gửi đến Google Form
         const formData = new FormData();
-        formData.append('action', 'add');
-        formData.append('data', JSON.stringify({
-            name: doc.name,
-            link: doc.link,
-            tags: doc.tags || []
-        }));
         
-        const response = await fetch(API_URL, {
+        // Map các trường với entry ID của Google Form
+        // Bạn cần thay thế các entry ID này bằng ID thực tế từ Google Form của bạn
+        // Lấy từ inspect element của form: name="entry.XXXXXXXX"
+        formData.append('entry.123456789', doc.name); // Thay bằng entry ID của trường Name
+        formData.append('entry.987654321', doc.link); // Thay bằng entry ID của trường Link
+        formData.append('entry.456789123', doc.tags ? doc.tags.join(', ') : ''); // Thay bằng entry ID của trường Tags
+        
+        // Gửi đến Google Form
+        const response = await fetch(GOOGLE_FORM_URL, {
             method: 'POST',
-            mode: 'cors',
+            mode: 'no-cors', // Quan trọng: Google Form yêu cầu no-cors
             cache: 'no-cache',
-            body: formData
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                'entry.123456789': doc.name,
+                'entry.987654321': doc.link,
+                'entry.456789123': doc.tags ? doc.tags.join(', ') : ''
+            })
         });
         
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
+        // Với no-cors, response không thể đọc được nhưng thường là thành công
+        // Chúng ta vẫn coi là thành công
+        log(`📤 Document submitted to Google Form: ${doc.name}`, 'system');
+        return true;
         
-        const result = await response.json();
-        return result.success;
     } catch (error) {
-        console.error('Add document error:', error);
+        console.error('Add document via Form error:', error);
         throw error;
     }
 }
 
+// ==================== GOOGLE FORM - DELETE DOCUMENT ====================
+// Lưu ý: Xóa qua Google Form không được hỗ trợ trực tiếp
+// Cần phải xóa thủ công trên Google Sheets hoặc sử dụng Google Apps Script
 async function deleteDocumentFromGoogleSheets(index) {
     try {
+        // Vì Google Form không hỗ trợ xóa, chúng ta gọi trực tiếp đến Google Apps Script
         const formData = new FormData();
         formData.append('action', 'delete');
         formData.append('index', index);
         
-        const response = await fetch(API_URL, {
+        const response = await fetch(GOOGLE_SHEETS_DATA_URL, {
             method: 'POST',
             mode: 'cors',
             cache: 'no-cache',
@@ -820,7 +835,7 @@ function renderLibrary(filteredList = null) {
     `}).join('');
 }
 
-// ==================== ADD DOCUMENT ====================
+// ==================== ADD DOCUMENT VIA GOOGLE FORM ====================
 async function addDocument() {
     const nameInput = document.getElementById('newDocName');
     const linkInput = document.getElementById('newDocLink');
@@ -857,11 +872,11 @@ async function addDocument() {
     const newDoc = { name, link, tags };
     
     try {
-        // Thêm lên Google Sheets
+        // Gửi document qua Google Form
         const success = await addDocumentToGoogleSheets(newDoc);
         
         if (success) {
-            // Nếu thành công, thêm vào library và render lại
+            // Thêm tạm vào library để hiển thị ngay
             library.push(newDoc);
             renderLibrary();
             
@@ -869,27 +884,30 @@ async function addDocument() {
             linkInput.value = '';
             tagsInput.value = '';
             
-            log(`📚 Added document: ${name}`, 'system');
-            alert(`✅ Document "${name}" added successfully!`);
+            log(`📤 Document submitted via Google Form: ${name}`, 'system');
+            alert(`✅ Document "${name}" has been submitted to Google Form!\n\nPlease check your Google Sheets to confirm the entry.`);
             nameInput.focus();
             
-            // Cập nhật sync status
-            updateSyncStatus('success', `Added: ${name}`);
+            updateSyncStatus('success', `Submitted: ${name}`);
             setTimeout(() => {
                 updateSyncStatus('idle', `Loaded ${library.length} documents`);
             }, 2000);
+            
+            // Tự động refresh dữ liệu sau 3 giây
+            setTimeout(() => {
+                syncWithGoogleSheets();
+            }, 3000);
         } else {
-            throw new Error('Failed to add document to Google Sheets');
+            throw new Error('Failed to submit document to Google Form');
         }
     } catch (error) {
         console.error('Add document error:', error);
-        alert('❌ Failed to add document to cloud. Please check your connection.');
-        log('⚠️ Failed to add document to Google Sheets', 'system');
+        alert('❌ Failed to submit document. Please check:\n1. Google Form URL is correct\n2. Entry IDs are correct\n3. Internet connection');
+        log('⚠️ Failed to submit document via Google Form', 'system');
     }
 }
 
 // ==================== DELETE DOCUMENT WITH PASSWORD (SECURE) ====================
-// Password được lưu trong biến này, không hiển thị ở bất kỳ đâu
 const DELETE_PASSWORD = 'admin123';
 
 function showDeletePassword(index) {
@@ -901,7 +919,6 @@ function showDeletePassword(index) {
         return;
     }
     
-    // Tạo modal nhập password (không hiển thị gợi ý password)
     const passwordModal = document.createElement('div');
     passwordModal.id = 'passwordModal';
     passwordModal.style.cssText = `
@@ -934,7 +951,6 @@ function showDeletePassword(index) {
     `;
     document.body.appendChild(passwordModal);
     
-    // Focus vào input
     setTimeout(() => {
         const input = document.getElementById('deletePasswordInput');
         if (input) input.focus();
@@ -952,17 +968,14 @@ async function confirmDeleteWithPassword() {
     const password = passwordInput ? passwordInput.value.trim() : '';
     const errorDiv = document.getElementById('passwordError');
     
-    // So sánh với password cố định (không hiển thị ở đâu)
     if (password === DELETE_PASSWORD) {
         if (deleteTargetIndex !== null && deleteTargetIndex < library.length) {
             const doc = library[deleteTargetIndex];
             
             try {
-                // Xóa trên Google Sheets
                 const success = await deleteDocumentFromGoogleSheets(deleteTargetIndex);
                 
                 if (success) {
-                    // Nếu thành công, xóa khỏi library
                     library.splice(deleteTargetIndex, 1);
                     renderLibrary();
                     log(`🗑️ Deleted: ${doc.name}`, 'system');
@@ -987,7 +1000,6 @@ async function confirmDeleteWithPassword() {
             closePasswordModal();
         }
     } else {
-        // Sai password - hiển thị lỗi
         if (errorDiv) {
             errorDiv.style.display = 'block';
             errorDiv.textContent = '❌ Incorrect password! Please try again.';
@@ -1031,7 +1043,6 @@ function openLibrary() {
         document.getElementById('searchQuery').value = '';
         document.getElementById('searchResults').style.display = 'none';
         log("📚 Library opened", 'system');
-        // Refresh dữ liệu khi mở Library
         syncWithGoogleSheets();
     }
 }
@@ -1223,6 +1234,35 @@ function searchAndOpenDocument(name) {
     return false;
 }
 
+// ==================== GOOGLE FORM CONFIGURATION GUIDE ====================
+function showGoogleFormGuide() {
+    alert(`📋 GOOGLE FORM CONFIGURATION GUIDE
+
+1. Tạo một Google Form mới với 3 trường:
+   - Name (Text)
+   - Link (Text) 
+   - Tags (Text)
+
+2. Mở Form, click "Send" → "Get pre-filled link"
+
+3. Điền dữ liệu mẫu và lấy link
+
+4. Tìm entry ID trong URL:
+   https://docs.google.com/forms/d/e/.../viewform?entry.123456789=value
+
+5. Cập nhật các entry ID trong file script.js:
+   - entry.123456789 → entry ID của trường Name
+   - entry.987654321 → entry ID của trường Link  
+   - entry.456789123 → entry ID của trường Tags
+
+6. Cập nhật GOOGLE_FORM_URL với URL Form của bạn
+
+💡 Tips:
+- Xóa document vẫn cần Google Apps Script
+- Đảm bảo Form ở chế độ public (anyone can respond)
+`);
+}
+
 // ==================== EVENT LISTENERS ====================
 document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.modal-overlay').forEach(modal => {
@@ -1235,8 +1275,22 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Load data from Google Sheets
     syncWithGoogleSheets();
+    
+    // Thêm nút hướng dẫn cấu hình Google Form
+    const libraryBody = document.querySelector('#libraryModal .modal-body');
+    if (libraryBody) {
+        const configBtn = document.createElement('button');
+        configBtn.className = 'btn btn-help';
+        configBtn.style.cssText = 'padding: 4px 12px; height: 28px; font-size: 10px; margin-left: 8px; flex: none;';
+        configBtn.innerHTML = '⚙️ Form Config';
+        configBtn.onclick = showGoogleFormGuide;
+        
+        const header = document.querySelector('#libraryModal .modal-title h2');
+        if (header) {
+            header.parentNode.appendChild(configBtn);
+        }
+    }
 });
 
 document.addEventListener('keydown', function(e) {
@@ -1278,4 +1332,4 @@ draw();
 log("🚀 3D Opening Tool Pro ready", 'system');
 log("💡 Press Voice button and speak (e.g.: length 2000, width 1500, thickness 300)", 'system');
 log("📚 Press Library button to manage Drive documents", 'system');
-log("🔄 Data is stored in Google Sheets", 'system');
+log("📤 Documents are submitted via Google Form", 'system');
