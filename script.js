@@ -9,6 +9,124 @@ let partialTranscript = '';
 let isSpeaking = false;
 let hasAutoTriggeredSave = false;
 
+// ==================== GOOGLE SHEETS CONFIGURATION ====================
+const API_URL = 'https://script.google.com/macros/s/AKfycbzqm98gVDVefQ0Ck-zZpTOSLYlO8AOWolMix9EKchndR-GjKGPFtzQ5xmb_eHbIvZJzJw/exec';
+let isSyncing = false;
+
+// ==================== SYNC FUNCTIONS ====================
+async function syncWithGoogleSheets() {
+    if (isSyncing) return;
+    isSyncing = true;
+    updateSyncStatus('syncing', 'Syncing...');
+    
+    try {
+        // Tải dữ liệu từ Google Sheets
+        const response = await fetch(`${API_URL}?action=get`);
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+            const cloudData = result.data;
+            
+            // Nếu có dữ liệu trên cloud, merge với local
+            if (cloudData.length > 0) {
+                // Merge dữ liệu: ưu tiên dữ liệu cloud
+                const cloudDocs = cloudData.map(item => ({
+                    name: item.Name || item.name || 'Untitled',
+                    link: item.Link || item.link || '',
+                    tags: item.Tags ? item.Tags.split(',').map(t => t.trim()).filter(t => t) : []
+                }));
+                
+                // Kiểm tra xem có cần merge không
+                if (library.length === 0) {
+                    library = cloudDocs;
+                } else {
+                    // Merge: thêm các document từ cloud chưa có trong local
+                    const localNames = library.map(d => d.name);
+                    const newDocs = cloudDocs.filter(d => !localNames.includes(d.name));
+                    if (newDocs.length > 0) {
+                        library = [...newDocs, ...library];
+                    }
+                }
+                
+                saveLibrary();
+                renderLibrary();
+                log('✅ Đã đồng bộ với Google Sheets!', 'system');
+                updateSyncStatus('success', 'Đã đồng bộ thành công');
+            } else {
+                // Nếu cloud trống, upload local data lên
+                await uploadAllToGoogleSheets();
+                updateSyncStatus('success', 'Đã upload dữ liệu lên cloud');
+            }
+        } else {
+            // Nếu không có dữ liệu cloud, upload local
+            await uploadAllToGoogleSheets();
+            updateSyncStatus('success', 'Đã upload dữ liệu lên cloud');
+        }
+    } catch (error) {
+        console.error('Sync error:', error);
+        log('⚠️ Lỗi đồng bộ với Google Sheets', 'system');
+        updateSyncStatus('error', 'Lỗi đồng bộ');
+    } finally {
+        isSyncing = false;
+        setTimeout(() => {
+            updateSyncStatus('idle', 'Sẵn sàng');
+        }, 3000);
+    }
+}
+
+async function uploadAllToGoogleSheets() {
+    try {
+        for (const doc of library) {
+            const formData = new FormData();
+            formData.append('action', 'add');
+            formData.append('data', JSON.stringify({
+                name: doc.name,
+                link: doc.link,
+                tags: doc.tags || []
+            }));
+            await fetch(API_URL, { method: 'POST', body: formData });
+        }
+        log(`📤 Đã upload ${library.length} documents lên cloud`, 'system');
+    } catch (error) {
+        console.error('Upload error:', error);
+        throw error;
+    }
+}
+
+function updateSyncStatus(status, text) {
+    const icon = document.getElementById('syncIcon');
+    const textEl = document.getElementById('syncText');
+    const statusEl = document.getElementById('syncStatus');
+    
+    if (!icon || !textEl || !statusEl) return;
+    
+    switch(status) {
+        case 'syncing':
+            icon.textContent = '🔄';
+            textEl.textContent = text;
+            statusEl.style.borderColor = 'rgba(0,210,255,0.3)';
+            statusEl.style.background = 'rgba(0,210,255,0.05)';
+            break;
+        case 'success':
+            icon.textContent = '✅';
+            textEl.textContent = text;
+            statusEl.style.borderColor = 'rgba(0,255,0,0.3)';
+            statusEl.style.background = 'rgba(0,255,0,0.05)';
+            break;
+        case 'error':
+            icon.textContent = '❌';
+            textEl.textContent = text;
+            statusEl.style.borderColor = 'rgba(255,0,0,0.3)';
+            statusEl.style.background = 'rgba(255,0,0,0.05)';
+            break;
+        default:
+            icon.textContent = '✅';
+            textEl.textContent = text || 'Sẵn sàng';
+            statusEl.style.borderColor = 'rgba(0,210,255,0.1)';
+            statusEl.style.background = 'rgba(0,210,255,0.05)';
+    }
+}
+
 // ==================== VOICE RECOGNITION ====================
 function initVoice() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -294,7 +412,7 @@ function log(t, type = 'user') {
 function speak(t) {
     window.speechSynthesis.cancel();
     let u = new SpeechSynthesisUtterance(t);
-    u.lang = "en-US"; u.rate = 0.95; u.pitch = 1.05; u.volume = 1;
+    u.lang = "vi-VN"; u.rate = 0.95; u.pitch = 1.05; u.volume = 1;
     isSpeaking = true;
     u.onend = () => { isSpeaking = false; };
     window.speechSynthesis.speak(u);
@@ -673,6 +791,10 @@ function loadLibrary() {
         library = [];
     }
     renderLibrary();
+    // Tự động sync khi load
+    setTimeout(() => {
+        syncWithGoogleSheets();
+    }, 1000);
 }
 
 function saveLibrary() {
@@ -714,7 +836,7 @@ function renderLibrary(filteredList = null) {
 }
 
 // ==================== ADD DOCUMENT ====================
-function addDocument() {
+async function addDocument() {
     console.log('addDocument called');
     
     const nameInput = document.getElementById('newDocName');
@@ -755,8 +877,23 @@ function addDocument() {
         return;
     }
     
-    library.push({ name, link, tags });
+    // Tạo document mới
+    const newDoc = { name, link, tags };
+    library.push(newDoc);
     saveLibrary();
+    
+    // Đồng bộ lên Google Sheets
+    try {
+        const formData = new FormData();
+        formData.append('action', 'add');
+        formData.append('data', JSON.stringify(newDoc));
+        await fetch(API_URL, { method: 'POST', body: formData });
+        log('📤 Đã đồng bộ lên Google Sheets', 'system');
+    } catch (error) {
+        console.error('Sync error:', error);
+        log('⚠️ Lỗi đồng bộ với Google Sheets', 'system');
+    }
+    
     renderLibrary();
     
     nameInput.value = '';
@@ -769,7 +906,7 @@ function addDocument() {
 }
 
 // ==================== DELETE DOCUMENT ====================
-function deleteDocument(index) {
+async function deleteDocument(index) {
     console.log('deleteDocument called for index:', index);
     
     const doc = library[index];
@@ -782,6 +919,19 @@ function deleteDocument(index) {
     if (confirm(`Are you sure you want to delete "${doc.name}"?`)) {
         library.splice(index, 1);
         saveLibrary();
+        
+        // Xóa trên Google Sheets
+        try {
+            const formData = new FormData();
+            formData.append('action', 'delete');
+            formData.append('index', index);
+            await fetch(API_URL, { method: 'POST', body: formData });
+            log('🗑️ Đã xóa trên Google Sheets', 'system');
+        } catch (error) {
+            console.error('Delete sync error:', error);
+            log('⚠️ Lỗi đồng bộ xóa với Google Sheets', 'system');
+        }
+        
         renderLibrary();
         log(`🗑️ Deleted: ${doc.name}`, 'system');
         alert(`✅ Document "${doc.name}" deleted successfully!`);
@@ -1048,3 +1198,4 @@ draw();
 log("🚀 3D Opening Tool Pro ready", 'system');
 log("💡 Press Voice button and speak (e.g.: length 2000, width 1500, thickness 300)", 'system');
 log("📚 Press Library button to manage Drive documents", 'system');
+log("🔄 Data is synced with Google Sheets automatically", 'system');
