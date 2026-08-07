@@ -7,58 +7,13 @@ let recognition = null;
 let silenceTimer = null;
 let partialTranscript = '';
 let isSpeaking = false;
-let hasAutoTriggeredSave = false; 
-
-// ==================== SECURITY: Disable F12 & Developer Tools ====================
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'F12') {
-        e.preventDefault();
-        e.stopPropagation();
-        return false;
-    }
-    if (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'i' || e.key === 'j')) {
-        e.preventDefault();
-        e.stopPropagation();
-        return false;
-    }
-    if (e.ctrlKey && (e.key === 'U' || e.key === 'u')) {
-        e.preventDefault();
-        e.stopPropagation();
-        return false;
-    }
-    if (e.ctrlKey && (e.key === 'S' || e.key === 's')) {
-        e.preventDefault();
-        e.stopPropagation();
-        return false;
-    }
-});
-
-document.addEventListener('contextmenu', function(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    return false;
-});
-
-document.addEventListener('dragstart', function(e) {
-    e.preventDefault();
-    return false;
-});
-
-document.addEventListener('selectstart', function(e) {
-    e.preventDefault();
-    return false;
-});
-
-document.addEventListener('copy', function(e) {
-    e.preventDefault();
-    return false;
-});
+let hasAutoTriggeredSave = false;
 
 // ==================== VOICE RECOGNITION ====================
 function initVoice() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) {
-        log("❌ Trình duyệt không hỗ trợ Voice", 'system');
+        log("❌ Browser does not support Voice", 'system');
         return null;
     }
 
@@ -73,7 +28,7 @@ function initVoice() {
         document.getElementById('voiceBtn').classList.add('listening');
         document.getElementById('chatStatus').textContent = '● Listening...';
         document.getElementById('chatStatus').classList.add('waiting');
-        log("🎤 Đang lắng nghe...", 'system');
+        log("🎤 Listening...", 'system');
         partialTranscript = '';
         hasAutoTriggeredSave = false;
     };
@@ -90,10 +45,10 @@ function initVoice() {
 
     r.onerror = (e) => {
         if (e.error === 'not-allowed') {
-            log("❌ Quyền truy cập microphone bị từ chối", 'system');
+            log("❌ Microphone access denied", 'system');
             stopVoice();
         } else if (e.error !== 'no-speech') {
-            log(`⚠️ Lỗi: ${e.error}`, 'system');
+            log(`⚠️ Error: ${e.error}`, 'system');
         }
         if (isListening && e.error !== 'not-allowed') {
             try { setTimeout(() => { r.start(); }, 300); } catch(e) {}
@@ -147,7 +102,7 @@ function voice() {
         recognition.start();
         log("🎤 Voice activated - Speak clearly!", 'system');
     } catch(e) {
-        try { recognition.stop(); setTimeout(() => { recognition.start(); }, 300); } catch(e2) { log("⚠️ Lỗi khởi động voice", 'system'); }
+        try { recognition.stop(); setTimeout(() => { recognition.start(); }, 300); } catch(e2) { log("⚠️ Error starting voice", 'system'); }
     }
 }
 
@@ -159,7 +114,7 @@ function stopVoice() {
     document.getElementById('chatStatus').textContent = '● Ready';
     document.getElementById('chatStatus').classList.remove('waiting');
     partialTranscript = '';
-    log("🔇 Đã dừng lắng nghe", 'system');
+    log("🔇 Stopped listening", 'system');
 }
 
 function setOri(o) {
@@ -339,7 +294,7 @@ function log(t, type = 'user') {
 function speak(t) {
     window.speechSynthesis.cancel();
     let u = new SpeechSynthesisUtterance(t);
-    u.lang = "vi-VN"; u.rate = 0.95; u.pitch = 1.05; u.volume = 1;
+    u.lang = "en-US"; u.rate = 0.95; u.pitch = 1.05; u.volume = 1;
     isSpeaking = true;
     u.onend = () => { isSpeaking = false; };
     window.speechSynthesis.speak(u);
@@ -362,14 +317,14 @@ function processFullVoiceNLP(t) {
 
     const findVal = (keywords) => {
         for (let kw of keywords) {
-            let regex = new RegExp(`\\b${kw}\\b(?:\\s+là|\\s+bằng|\\s*[:=]|\\s+)?\\s*(-?\\d+(?:[.,]\\d+)?)`, "i");
+            let regex = new RegExp(`\\b${kw}\\b(?:\\s+is|\\s+of|\\s*[:=]|\\s+)?\\s*(-?\\d+(?:[.,]\\d+)?)`, "i");
             let match = str.match(regex);
             if (match) return cleanNumberString(match[1]);
         }
         return null;
     };
 
-    // Check for English search command
+    // Check for search command
     if (str.match(/search\s+(?:for\s+)?(.+)/i)) {
         let searchQuery = str.replace(/search\s+(?:for\s+)?/i, '').trim();
         if (searchQuery && searchQuery.length > 1) {
@@ -398,7 +353,7 @@ function processFullVoiceNLP(t) {
         return;
     }
 
-    // Check for English open document command
+    // Check for open document command
     if (str.match(/open\s+(?:document|file|doc)\s+(.+)/i)) {
         let docName = str.replace(/open\s+(?:document|file|doc)\s+/i, '').trim();
         if (docName && docName.length > 1) {
@@ -412,16 +367,16 @@ function processFullVoiceNLP(t) {
         return;
     }
 
-    if (str.match(/lưu\s*(?:file|tài\s*liệu|máy)?|save\s*/i) || str.match(/xuất\s*file/i)) {
+    if (str.match(/save\s*(?:file|document)?/i) || str.match(/export\s*file/i)) {
         autoSaveDialog();
-        log("💾 Đang mở hộp thoại lưu file", 'assistant');
-        speak("Đang mở hộp thoại lưu file");
+        log("💾 Opening save dialog", 'assistant');
+        speak("Opening save dialog");
         return;
     }
 
-    if (str.match(/tìm\s*(?:kiếm|thử|tài\s*liệu|thông\s*tin)\s*/i) || str.match(/search\s*/i)) {
-        let searchQuery = str.replace(/tìm\s*(?:kiếm|thử|tài\s*liệu|thông\s*tin)\s*/i, '').trim();
-        searchQuery = searchQuery.replace(/(cho\s*tôi|giúp\s*tôi|hãy|xin\s*hãy)/gi, '').trim();
+    if (str.match(/find|search|look for/i) && !str.match(/save|open|export/i)) {
+        let searchQuery = str.replace(/find|search|look for/gi, '').trim();
+        searchQuery = searchQuery.replace(/(for|me|please)/gi, '').trim();
         
         if (searchQuery && searchQuery.length > 1) {
             document.getElementById('searchQuery').value = searchQuery;
@@ -432,12 +387,12 @@ function processFullVoiceNLP(t) {
                     if (bestMatch.link.startsWith('http://') || bestMatch.link.startsWith('https://')) {
                         window.open(bestMatch.link, '_blank');
                     }
-                    log(`🎤 Voice: Đã mở "${bestMatch.name}"`, 'assistant');
-                    speak(`Đã mở ${bestMatch.name}`);
+                    log(`🎤 Voice: Opened "${bestMatch.name}"`, 'assistant');
+                    speak(`Opened ${bestMatch.name}`);
                 }
                 searchDocuments();
             } else {
-                speak(`Không tìm thấy kết quả cho "${searchQuery}"`);
+                speak(`No results found for "${searchQuery}"`);
                 searchDocuments();
             }
             const modal = document.getElementById('libraryModal');
@@ -446,45 +401,27 @@ function processFullVoiceNLP(t) {
             }
             updatedCount++;
         } else {
-            speak("Vui lòng nói nội dung cần tìm");
-            log("🗣️ Vui lòng nói nội dung cần tìm", 'assistant');
+            speak("Please say what you want to search");
+            log("🗣️ Please say what you want to search", 'assistant');
         }
         return;
     }
 
-    if (str.match(/mở\s*(?:tài\s*liệu|file|document|doc|văn\s*bản)\s*/i) || str.match(/open\s*/i)) {
-        let docName = str.replace(/mở\s*(?:tài\s*liệu|file|document|doc|văn\s*bản)\s*/i, '').trim();
-        docName = docName.replace(/(cho\s*tôi|giúp\s*tôi|hãy|xin\s*hãy)/gi, '').trim();
-        
-        if (docName && docName.length > 1) {
-            if (searchAndOpenDocument(docName)) {
-                updatedCount++;
-            } else {
-                speak(`Không tìm thấy tài liệu "${docName}" trong thư viện`);
-                log(`❌ Không tìm thấy tài liệu: ${docName}`, 'assistant');
-            }
-        } else {
-            speak("Vui lòng nói tên tài liệu cần mở");
-            log("🗣️ Vui lòng nói tên tài liệu cần mở", 'assistant');
-        }
-        return;
-    }
-
-    let len = findVal(["chiều dài", "độ dài", "length"]);
-    let wid = findVal(["chiều rộng", "độ rộng", "width"]);
-    let hei = findVal(["chiều dày", "độ dày", "thickness"]); 
+    let len = findVal(["length"]);
+    let wid = findVal(["width"]);
+    let hei = findVal(["thickness", "height"]);
 
     if (len === null) len = findVal(["dài"]);
     if (wid === null) wid = findVal(["rộng"]);
-    if (hei === null) hei = findVal(["dày", "chiều cao", "cao", "height"]);
+    if (hei === null) hei = findVal(["dày", "cao"]);
 
     if (len !== null) { document.getElementById("dx").value = len; updatedCount++; }
     if (wid !== null) { document.getElementById("dy").value = wid; updatedCount++; }
     if (hei !== null) { document.getElementById("dz").value = hei; updatedCount++; }
 
-    let posX = findVal(["vị trí x", "pos x", "tọa độ x", "position x"]);
-    let posY = findVal(["vị trí y", "pos y", "tọa độ y", "position y"]);
-    let posZ = findVal(["vị trí z", "pos z", "tọa độ z", "position z"]);
+    let posX = findVal(["position x", "pos x", "x position"]);
+    let posY = findVal(["position y", "pos y", "y position"]);
+    let posZ = findVal(["position z", "pos z", "z position"]);
 
     const getCoord = (axis) => {
         let regex = new RegExp(`(?:^|\\s|,)${axis}\\s*(-?\\d+(?:[.,]\\d+)?)`, "i");
@@ -500,7 +437,7 @@ function processFullVoiceNLP(t) {
     if (posY !== null) { document.getElementById("py").value = posY; updatedCount++; }
     if (posZ !== null) { document.getElementById("pz").value = posZ; updatedCount++; }
 
-    let radAll = findVal(["bo góc", "bán kính", "radius"]);
+    let radAll = findVal(["corner radius", "radius"]);
     if (radAll !== null) {
         document.getElementById("r1").value = radAll;
         document.getElementById("r2").value = radAll;
@@ -509,13 +446,13 @@ function processFullVoiceNLP(t) {
         updatedCount++;
     }
 
-    if (str.match(/hướng\s*x/i) || str.match(/ox\s*$/i)) { setOri('X'); updatedCount++; }
-    else if (str.match(/hướng\s*y/i) || str.match(/oy\s*$/i)) { setOri('Y'); updatedCount++; }
-    else if (str.match(/hướng\s*z/i) || str.match(/oz\s*$/i)) { setOri('Z'); updatedCount++; }
+    if (str.match(/orientation\s*x/i) || str.match(/axis\s*x/i)) { setOri('X'); updatedCount++; }
+    else if (str.match(/orientation\s*y/i) || str.match(/axis\s*y/i)) { setOri('Y'); updatedCount++; }
+    else if (str.match(/orientation\s*z/i) || str.match(/axis\s*z/i)) { setOri('Z'); updatedCount++; }
 
     if (updatedCount > 0) {
         draw();
-        const msg = "✅ Đã cập nhật thông số thành công!";
+        const msg = "✅ Parameters updated successfully!";
         log("🤖 " + msg, 'assistant');
         speak(msg);
         autoSaveDialog();
@@ -527,14 +464,14 @@ function processFullVoiceNLP(t) {
             document.getElementById("dz").value = cleanNumberString(rawNums[2]);
             updatedCount = 3;
             draw();
-            log("🤖 Đã nhận dạng số liệu theo thứ tự (Dài, Rộng, Dày)", 'assistant');
+            log("🤖 Detected numbers in order (Length, Width, Thickness)", 'assistant');
             autoSaveDialog();
         } else {
             if (str.length > 3) {
                 const searchResults = performSmartSearch(str);
                 if (searchResults.length > 0) {
-                    log(`🔍 Tìm thấy ${searchResults.length} tài liệu liên quan đến "${str}"`, 'system');
-                    speak(`Tìm thấy ${searchResults.length} tài liệu liên quan`);
+                    log(`🔍 Found ${searchResults.length} documents related to "${str}"`, 'system');
+                    speak(`Found ${searchResults.length} related documents`);
                     const modal = document.getElementById('libraryModal');
                     if (!modal.classList.contains('active')) {
                         openLibrary();
@@ -544,7 +481,7 @@ function processFullVoiceNLP(t) {
                     return;
                 }
             }
-            const msg = "⚠️ Chưa nhận diện được thông số, vui lòng nói rõ hơn!";
+            const msg = "⚠️ Could not recognize parameters, please speak clearly!";
             log("🤖 " + msg, 'assistant');
             speak(msg);
         }
@@ -566,7 +503,7 @@ function autoSaveDialog() {
             modal.classList.add('active');
             document.body.style.overflow = 'hidden';
             document.getElementById('saveFileName').value = `Opening_${L}x${W}x${T}`;
-            log("📁 Đã nhận đủ dữ liệu, đang mở hộp thoại lưu file...", 'system');
+            log("📁 All dimensions entered, opening save dialog...", 'system');
         }
     }
 }
@@ -658,8 +595,8 @@ END`;
     document.body.removeChild(a);
     URL.revokeObjectURL(a.href);
     
-    log(`💾 Đã xuất file ${fileName}.mac thành công!`, 'system');
-    speak("File của bạn đã được xuất thành công");
+    log(`💾 Exported ${fileName}.mac successfully!`, 'system');
+    speak("Your file has been exported successfully");
 }
 
 function reset() {
@@ -675,8 +612,8 @@ function reset() {
     document.getElementById("r4").value = 150;
     hasAutoTriggeredSave = false;
     setOri('Z');
-    log("↺ Đã reset tất cả thông số", 'system');
-    speak("Đã reset về mặc định");
+    log("↺ Reset all parameters", 'system');
+    speak("Reset to default");
 }
 
 // ==================== HELP ====================
@@ -685,7 +622,7 @@ function help() {
     if (modal) {
         modal.classList.add('active');
         document.body.style.overflow = 'hidden';
-        log("📖 Đã mở hướng dẫn sử dụng", 'system');
+        log("📖 Help opened", 'system');
     }
 }
 
@@ -701,9 +638,6 @@ function closeHelp() {
 let library = [];
 let isLibraryVoiceListening = false;
 let libraryVoiceRecognition = null;
-
-// Password for deleting documents - INTERNAL USE ONLY, NOT DISPLAYED ANYWHERE
-const DELETE_PASSWORD = 'admin123';
 
 function loadLibrary() {
     try {
@@ -774,7 +708,7 @@ function renderLibrary(filteredList = null) {
                 ${tagsHtml}
             </div>
             <button onclick="openDocument(${originalIndex})" class="btn btn-primary" style="flex: none; padding: 0 16px; height: 32px; font-size: 11px;">📂 Open</button>
-            <button onclick="showDeletePassword(${originalIndex})" class="btn btn-reset" style="flex: none; padding: 0 12px; height: 32px; font-size: 11px; background: rgba(255,0,0,0.2);">✕</button>
+            <button onclick="deleteDocument(${originalIndex})" class="btn btn-reset" style="flex: none; padding: 0 12px; height: 32px; font-size: 11px; background: rgba(255,0,0,0.2);">✕</button>
         </div>
     `}).join('');
 }
@@ -834,13 +768,10 @@ function addDocument() {
     nameInput.focus();
 }
 
-// ==================== DELETE WITH PASSWORD ====================
-let deleteTargetIndex = null;
-
-function showDeletePassword(index) {
-    console.log('showDeletePassword called for index:', index);
+// ==================== DELETE DOCUMENT ====================
+function deleteDocument(index) {
+    console.log('deleteDocument called for index:', index);
     
-    deleteTargetIndex = index;
     const doc = library[index];
     
     if (!doc) {
@@ -848,112 +779,14 @@ function showDeletePassword(index) {
         return;
     }
     
-    const passwordModal = document.createElement('div');
-    passwordModal.id = 'passwordModal';
-    passwordModal.style.cssText = `
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,0.85);
-        backdrop-filter: blur(10px);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 2000;
-        animation: fadeIn 0.3s ease;
-    `;
-    passwordModal.innerHTML = `
-        <div style="background: rgba(20,27,43,0.98); border-radius: 20px; border: 1px solid rgba(255,255,255,0.08); max-width: 400px; width: 90%; padding: 30px; box-shadow: 0 30px 60px rgba(0,0,0,0.8);">
-            <div style="text-align: center; margin-bottom: 20px;">
-                <span style="font-size: 40px;">🔒</span>
-                <h3 style="color: #fff; margin: 10px 0 5px 0; font-weight: 700;">Confirm Deletion</h3>
-                <p style="color: rgba(255,255,255,0.6); font-size: 13px;">You are deleting: <strong style="color: #ff7675;">"${doc.name}"</strong></p>
-                <p style="color: rgba(255,255,255,0.4); font-size: 12px; margin-top: 5px;">Enter password to confirm</p>
-            </div>
-            <input id="deletePasswordInput" type="password" placeholder="Enter password..." 
-                   style="width: 100%; height: 44px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 15px; padding: 0 14px; outline: none; font-family: 'Inter', sans-serif; margin-bottom: 15px;">
-            <div style="display: flex; gap: 10px;">
-                <button onclick="closePasswordModal()" style="flex: 1; height: 40px; border: none; border-radius: 10px; background: rgba(255,255,255,0.1); color: #fff; font-weight: 600; cursor: pointer;">Cancel</button>
-                <button onclick="confirmDeleteWithPassword()" style="flex: 1; height: 40px; border: none; border-radius: 10px; background: linear-gradient(135deg, #d63031, #ff7675); color: #fff; font-weight: 600; cursor: pointer;">Confirm Delete</button>
-            </div>
-            <div id="passwordError" style="color: #ff7675; font-size: 12px; margin-top: 10px; text-align: center; display: none;">❌ Incorrect password!</div>
-        </div>
-    `;
-    document.body.appendChild(passwordModal);
-    
-    setTimeout(() => {
-        const input = document.getElementById('deletePasswordInput');
-        if (input) {
-            input.focus();
-        }
-    }, 200);
-}
-
-function closePasswordModal() {
-    console.log('closePasswordModal called');
-    const modal = document.getElementById('passwordModal');
-    if (modal) {
-        modal.remove();
-    }
-    deleteTargetIndex = null;
-    window.wrongPasswordAttempts = 0;
-}
-
-function confirmDeleteWithPassword() {
-    console.log('confirmDeleteWithPassword called');
-    
-    const passwordInput = document.getElementById('deletePasswordInput');
-    const password = passwordInput ? passwordInput.value.trim() : '';
-    const errorDiv = document.getElementById('passwordError');
-    
-    if (password === DELETE_PASSWORD) {
-        if (deleteTargetIndex !== null && deleteTargetIndex < library.length) {
-            const doc = library[deleteTargetIndex];
-            library.splice(deleteTargetIndex, 1);
-            saveLibrary();
-            renderLibrary();
-            log(`🗑️ Deleted: ${doc.name}`, 'system');
-            alert(`✅ Document "${doc.name}" deleted successfully!`);
-            closePasswordModal();
-        } else {
-            alert('⚠️ Error: Document not found');
-            closePasswordModal();
-        }
-    } else {
-        if (errorDiv) {
-            errorDiv.style.display = 'block';
-            errorDiv.textContent = '❌ Incorrect password! Please try again.';
-        }
-        if (passwordInput) {
-            passwordInput.value = '';
-            passwordInput.focus();
-            passwordInput.style.borderColor = '#ff7675';
-            setTimeout(() => {
-                passwordInput.style.borderColor = 'rgba(255,255,255,0.1)';
-            }, 2000);
-        }
-        log(`❌ Delete failed: Incorrect password`, 'system');
-        
-        if (!window.wrongPasswordAttempts) {
-            window.wrongPasswordAttempts = 0;
-        }
-        window.wrongPasswordAttempts++;
-        if (window.wrongPasswordAttempts >= 3) {
-            alert('🔒 You have entered the wrong password 3 times. Please try again later.');
-            closePasswordModal();
-            window.wrongPasswordAttempts = 0;
-        }
+    if (confirm(`Are you sure you want to delete "${doc.name}"?`)) {
+        library.splice(index, 1);
+        saveLibrary();
+        renderLibrary();
+        log(`🗑️ Deleted: ${doc.name}`, 'system');
+        alert(`✅ Document "${doc.name}" deleted successfully!`);
     }
 }
-
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') {
-        const passwordModal = document.getElementById('passwordModal');
-        if (passwordModal) {
-            e.preventDefault();
-            confirmDeleteWithPassword();
-        }
-    }
-});
 
 // ==================== OTHER LIBRARY FUNCTIONS ====================
 function openDocument(index) {
@@ -990,7 +823,6 @@ function closeLibrary() {
         modal.classList.remove('active');
         document.body.style.overflow = '';
         stopLibraryVoice();
-        closePasswordModal();
     }
 }
 
@@ -1214,5 +1046,5 @@ window.addEventListener("resize", draw);
 // ==================== STARTUP ====================
 draw();
 log("🚀 3D Opening Tool Pro ready", 'system');
-log("💡 Nhấn nút Voice và nói (VD: chiều dài 2000, chiều rộng 5000, chiều dày 300)", 'system');
-log("📚 Nhấn nút Library để quản lý tài liệu Drive", 'system');
+log("💡 Press Voice button and speak (e.g.: length 2000, width 1500, thickness 300)", 'system');
+log("📚 Press Library button to manage Drive documents", 'system');
