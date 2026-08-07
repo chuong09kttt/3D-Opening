@@ -369,6 +369,15 @@ input[type=number] { -moz-appearance: textfield !important; }
     }
 }
 
+/* ==================== SYNC STATUS ==================== */
+#syncStatus {
+    transition: all 0.3s ease;
+}
+
+#syncStatus .btn:hover {
+    transform: translateY(-1px);
+}
+
 /* ==================== RESPONSIVE ==================== */
 @media (max-width: 768px) {
     body { padding: 8px; }
