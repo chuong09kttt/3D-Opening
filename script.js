@@ -11,7 +11,7 @@ let hasAutoTriggeredSave = false;
 
 // ==================== CONFIGURATION ====================
 // 👇 QUAN TRỌNG: Điền URL Apps Script mới bạn vừa Deploy ở Bước 1 vào đây
-const GOOGLE_SHEETS_DATA_URL = 'https://script.google.com/macros/s/AKfycbyPo7h589-fslD3beHwaurJpJZWhV8mvYspJDifkpTL04vgwJtjlQWqaBgZwGrrfAFo/exec';
+const GOOGLE_SHEETS_DATA_URL = 'https://script.google.com/macros/s/AKfycbzn1FdfCcjugOWN41pdvP3DhzmMr9F-M-B6RnTu16OPMuDm20ghBCL08LMd6-d6IJuC/exec';
 
 let isSyncing = false;
 let library = [];
