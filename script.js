@@ -17,7 +17,7 @@ let isSyncing = false;
 let library = [];
 let deleteTargetIndex = null;
 
-// Khai báo các biến cho Voice Search trong Library (Quan trọng: Đã thêm vào đây)
+// Khai báo các biến cho Voice Search trong Library
 let isLibraryVoiceListening = false;
 let libraryVoiceRecognition = null;
 
@@ -122,7 +122,7 @@ async function deleteDocumentFromGoogleSheets(index, password) {
     try {
         const response = await fetch(GOOGLE_SHEETS_DATA_URL, {
             method: 'POST',
-            mode: 'no-cors', // Tránh Preflight CORS
+            mode: 'no-cors', 
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded'
             },
@@ -392,18 +392,19 @@ function processFullVoiceNLP(t) {
     else { log("⚠️ Could not recognize parameters", 'assistant'); }
 }
 
-// ==================== VOICE RECOGNITION ====================
+// ==================== VOICE RECOGNITION (MAIN) ====================
 function initVoice() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) { log("❌ Browser does not support Voice", 'system'); return null; }
     const r = new SR();
-    r.lang = "vi-VN"; r.continuous = true; r.interimResults = true;
+    r.lang = "vi-VN"; // Nhận diện tiếng Việt
+    r.continuous = true; r.interimResults = true;
     r.onstart = () => {
         isListening = true;
         document.getElementById('voiceBtn').classList.add('listening');
         document.getElementById('chatStatus').textContent = '● Listening...';
         document.getElementById('chatStatus').classList.add('waiting');
-        log("🎤 Listening...", 'system');
+        log("🎤 Đang nghe (Tiếng Việt)...", 'system');
         partialTranscript = ''; hasAutoTriggeredSave = false;
     };
     r.onend = () => {
@@ -469,24 +470,16 @@ function confirmSave() {
     closeSaveDialog(); 
 }
 
-// ==================== HÀM QUAN TRỌNG BỊ THIẾU (Nút Export gọi hàm này) ====================
+// ==================== EXPORT .MAC FILE ====================
 function saveFile() {
     const fileName = document.getElementById('saveFileName').value.trim() || "Opening";
     generateAndDownloadFile(fileName);
 }
 
-// ==================== EXPORT .MAC FILE ====================
 function generateAndDownloadFile(fileName) {
-    let px = parseInputValue("px");
-    let py = parseInputValue("py");
-    let pz = parseInputValue("pz");
-
-    let L = parseInputValue("dx");
-    let W = parseInputValue("dy");
-    let H = parseInputValue("dz");
-
-    let r1 = parseInputValue("r1"); let r2 = parseInputValue("r2");
-    let r3 = parseInputValue("r3"); let r4 = parseInputValue("r4");
+    let px = parseInputValue("px"); let py = parseInputValue("py"); let pz = parseInputValue("pz");
+    let L = parseInputValue("dx"); let W = parseInputValue("dy"); let H = parseInputValue("dz");
+    let r1 = parseInputValue("r1"); let r2 = parseInputValue("r2"); let r3 = parseInputValue("r3"); let r4 = parseInputValue("r4");
 
     let oriStr = "ORI Y is Y and Z is Z";
     if (ORI === "X") { oriStr = "ORI Y is -Z and Z is X"; } 
@@ -534,16 +527,12 @@ END
 END`;
 
     let blob = new Blob([data], { type: "text/plain" });
-    let a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `${fileName}.mac`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    let a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `${fileName}.mac`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
     URL.revokeObjectURL(a.href);
     
     log(`💾 Exported ${fileName}.mac successfully!`, 'system');
-    speak("Your file has been exported successfully");
+    speak("File của bạn đã được xuất thành công"); // Đã đổi sang tiếng Việt
 }
 
 function setOri(o) { ORI = o; document.querySelectorAll(".ori-buttons button").forEach(b => b.classList.remove("active")); document.getElementById("o" + o.toLowerCase()).classList.add("active"); document.getElementById('oriBadge').textContent = o; draw(); }
@@ -621,7 +610,8 @@ function log(t, type = 'user') {
 
 function speak(t) {
     window.speechSynthesis.cancel(); let u = new SpeechSynthesisUtterance(t);
-    u.lang = "vi-VN"; u.rate = 0.95; u.pitch = 1.05; u.volume = 1;
+    u.lang = "vi-VN"; // Đọc bằng tiếng Việt
+    u.rate = 0.95; u.pitch = 1.05; u.volume = 1;
     isSpeaking = true; u.onend = () => { isSpeaking = false; }; window.speechSynthesis.speak(u);
 }
 
@@ -635,7 +625,7 @@ function reset() {
 function help() { const modal = document.getElementById('helpModal'); if (modal) { modal.classList.add('active'); document.body.style.overflow = 'hidden'; log("📖 Help opened", 'system'); } }
 function closeHelp() { const modal = document.getElementById('helpModal'); if (modal) { modal.classList.remove('active'); document.body.style.overflow = ''; } }
 
-// ==================== LIBRARY VOICE SEARCH ====================
+// ==================== LIBRARY VOICE SEARCH (ĐÃ SỬA SANG TIẾNG VIỆT) ====================
 function voiceSearchLibrary() {
     if (isLibraryVoiceListening) {
         stopLibraryVoice();
@@ -651,15 +641,15 @@ function voiceSearchLibrary() {
         }
         
         libraryVoiceRecognition = new SR();
-        libraryVoiceRecognition.lang = "en-US";
+        libraryVoiceRecognition.lang = "vi-VN"; // Đã sửa từ "en-US" thành "vi-VN" để nghe tiếng Việt
         libraryVoiceRecognition.continuous = false;
         libraryVoiceRecognition.interimResults = true;
         
         libraryVoiceRecognition.onstart = () => {
             isLibraryVoiceListening = true;
             document.getElementById('voiceSearchBtn').classList.add('listening');
-            document.getElementById('voiceSearchBtn').innerHTML = '<span class="btn-icon">⏹</span> Stop';
-            log("🎤 Listening for search query...", 'system');
+            document.getElementById('voiceSearchBtn').innerHTML = '<span class="btn-icon">⏹</span> Dừng';
+            log("🎤 Đang nghe tìm kiếm (Tiếng Việt)...", 'system');
         };
         
         libraryVoiceRecognition.onend = () => {
@@ -691,12 +681,12 @@ function voiceSearchLibrary() {
                                 log(`📄 Info: ${bestMatch.link}`, 'system');
                             }
                             log(`🎤 Voice: Opened "${bestMatch.name}"`, 'assistant');
-                            speak(`Opening ${bestMatch.name}`);
+                            speak(`Đang mở ${bestMatch.name}`);
                         }
                         searchDocuments();
                     } else {
-                        log(`🔍 Voice: "${transcript}" - No results found`, 'user');
-                        speak(`No results found for "${transcript}"`);
+                        log(`🔍 Voice: "${transcript}" - Không tìm thấy kết quả nào`, 'user');
+                        speak(`Không tìm thấy kết quả nào cho "${transcript}"`);
                         searchDocuments();
                     }
                     
@@ -739,7 +729,7 @@ function searchAndOpenDocument(name) {
                 log(`📄 Info: ${bestMatch.link}`, 'system');
             }
             log(`📂 Voice: Opened "${bestMatch.name}"`, 'assistant');
-            speak(`Opened ${bestMatch.name}`);
+            speak(`Đang mở ${bestMatch.name}`);
             return true;
         }
     }
@@ -777,5 +767,6 @@ window.addEventListener("resize", draw);
 // ==================== STARTUP ====================
 draw();
 log("🚀 3D Opening Tool Pro ready", 'system');
-log("📚 Press Library button to manage Drive documents", 'system');
+log("💡 Nhấn nút Voice và nói (VD: dài 2000, rộng 1500, dày 300)", 'system');
+log("📚 Nhấn Library để quản lý tài liệu Drive", 'system');
 log("✅ Apps Script URL: " + GOOGLE_SHEETS_DATA_URL, 'system');
