@@ -11,7 +11,6 @@ let hasAutoTriggeredSave = false;
 
 // ==================== GOOGLE FORM & APPS SCRIPT CONFIGURATION ====================
 const GOOGLE_FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSeSFgm7YG7YBJW59gwL7_UgT7II2fqhiaRF-G0HQ2hwrg-DUw/formResponse';
-// Đã thay bằng URL Apps Script mới của bạn:
 const GOOGLE_SHEETS_DATA_URL = 'https://script.google.com/macros/s/AKfycbxTMcnnk-bEHNEElFJbYNMwBzQ_1A8K4-ujlvqRZXW35O6_BwmatTUO3e1r74N1qlg/exec';
 
 let isSyncing = false;
@@ -113,7 +112,6 @@ async function addDocumentToGoogleSheets(doc) {
 }
 
 // ==================== GOOGLE APPS SCRIPT - DELETE DOCUMENT ====================
-// Lưu ý: Frontend KHÔNG chứa mật khẩu. Password sẽ được gửi lên Backend để xác thực.
 async function deleteDocumentFromGoogleSheets(index, password) {
     try {
         const response = await fetch(GOOGLE_SHEETS_DATA_URL, {
@@ -126,7 +124,7 @@ async function deleteDocumentFromGoogleSheets(index, password) {
             body: JSON.stringify({
                 action: 'delete',
                 index: index,
-                password: password // Backend sẽ kiểm tra password này
+                password: password 
             })
         });
         
@@ -875,33 +873,29 @@ async function addDocument() {
     
     try {
         // Gửi document qua Google Form
-        const success = await addDocumentToGoogleSheets(newDoc);
+        await addDocumentToGoogleSheets(newDoc);
         
-        if (success) {
-            // Thêm tạm vào library để hiển thị ngay
-            library.push(newDoc);
-            renderLibrary();
-            
-            nameInput.value = '';
-            linkInput.value = '';
-            tagsInput.value = '';
-            
-            log(`📤 Document submitted via Google Form: ${name}`, 'system');
-            alert(`✅ Document "${name}" has been submitted to Google Form!\n\nPlease check your Google Sheets to confirm the entry.`);
-            nameInput.focus();
-            
-            updateSyncStatus('success', `Submitted: ${name}`);
-            setTimeout(() => {
-                updateSyncStatus('idle', `Loaded ${library.length} documents`);
-            }, 2000);
-            
-            // Tự động refresh dữ liệu sau 3 giây
-            setTimeout(() => {
-                syncWithGoogleSheets();
-            }, 3000);
-        } else {
-            throw new Error('Failed to submit document to Google Form');
-        }
+        // Vì no-cors không cho nhận phản hồi, nên ta giả lập thành công và chờ người dùng tự refresh
+        library.push(newDoc);
+        renderLibrary();
+        
+        nameInput.value = '';
+        linkInput.value = '';
+        tagsInput.value = '';
+        
+        // Cập nhật giao diện (Không dùng alert nữa để tránh giật mình)
+        log(`📤 Document "${name}" submitted via Google Form`, 'system');
+        updateSyncStatus('success', `Submitted "${name}" to Form. Please refresh later!`);
+        speak(`Document ${name} submitted. Please refresh in a few seconds.`);
+        nameInput.focus();
+        
+        // Đã tắt tự động refresh, để người dùng tự nhấn Refresh khi dữ liệu đã có trên Sheet
+        // Thông báo dạng đồ họa mượt hơn (Thay vì alert bật lên)
+        document.querySelector('.control-group:last-child .group-header h3').innerHTML = '📤 Submitted!';
+        setTimeout(() => {
+            document.querySelector('.control-group:last-child .group-header h3').innerHTML = 'Add New Document';
+        }, 3000);
+        
     } catch (error) {
         console.error('Add document error:', error);
         alert('❌ Failed to submit document. Please check:\n1. Google Form URL is correct\n2. Entry IDs are correct\n3. Internet connection');
@@ -910,8 +904,6 @@ async function addDocument() {
 }
 
 // ==================== DELETE DOCUMENT WITH PASSWORD (SECURE BACKEND CHECK) ====================
-// CHÚ Ý: Không còn mật khẩu admin123 ở đây để tránh bị lộ. Backend sẽ xác thực.
-
 function showDeletePassword(index) {
     deleteTargetIndex = index;
     const doc = library[index];
@@ -974,7 +966,6 @@ async function confirmDeleteWithPassword() {
         const doc = library[deleteTargetIndex];
         
         try {
-            // Gửi mật khẩu lên Backend để xác thực an toàn
             const result = await deleteDocumentFromGoogleSheets(deleteTargetIndex, password);
             
             if (result.success) {
@@ -989,7 +980,6 @@ async function confirmDeleteWithPassword() {
                     updateSyncStatus('idle', `Loaded ${library.length} documents`);
                 }, 2000);
             } else {
-                // Lỗi từ server trả về (VD: Sai mật khẩu)
                 if (errorDiv) {
                     errorDiv.style.display = 'block';
                     errorDiv.textContent = `❌ ${result.error || 'Delete failed'}`;
