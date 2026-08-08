@@ -9,44 +9,36 @@ let partialTranscript = '';
 let isSpeaking = false;
 let hasAutoTriggeredSave = false;
 
-// ==================== GOOGLE FORM CONFIGURATION ====================
-// Đã cập nhật với URL Google Apps Script của bạn
+// ==================== GOOGLE FORM & APPS SCRIPT CONFIGURATION ====================
 const GOOGLE_FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSeSFgm7YG7YBJW59gwL7_UgT7II2fqhiaRF-G0HQ2hwrg-DUw/formResponse';
-const GOOGLE_SHEETS_DATA_URL = 'https://script.google.com/macros/s/AKfycbzgmTsy5NYtngTn7Tf1ysHheK2G31n5QNrKFuw7dsPRh_l08FkDUtAmvZJdwjTV2s1P/exec';
-
-
+// Đã thay bằng URL Apps Script mới của bạn:
+const GOOGLE_SHEETS_DATA_URL = 'https://script.google.com/macros/s/AKfycbxTMcnnk-bEHNEElFJbYNMwBzQ_1A8K4-ujlvqRZXW35O6_BwmatTUO3e1r74N1qlg/exec';
 
 let isSyncing = false;
 let library = [];
 let deleteTargetIndex = null;
 
-// ==================== SYNC FUNCTIONS ====================
-async function syncWithGoogleSheets() {
+// ==================== SYNC FUNCTIONS (FIXED CORS USING JSONP) ====================
+function syncWithGoogleSheets() {
     if (isSyncing) return;
     isSyncing = true;
     updateSyncStatus('syncing', 'Loading data...');
     
-    try {
-        const url = `${GOOGLE_SHEETS_DATA_URL}?action=get&t=${Date.now()}`;
+    // Tạo tên callback duy nhất để tránh lỗi cache/xung đột
+    const callbackName = 'jsonpCallback_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    
+    // Hàm xử lý khi dữ liệu được trả về
+    window[callbackName] = function(response) {
+        // Xóa thẻ script ngay lập tức để dọn dẹp DOM
+        const scriptEl = document.getElementById(callbackName);
+        if (scriptEl) document.body.removeChild(scriptEl);
         
-        const response = await fetch(url, {
-            method: 'GET',
-            mode: 'cors',
-            cache: 'no-cache',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            }
-        });
+        // Xóa callback khỏi window
+        delete window[callbackName];
         
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const result = await response.json();
-        
-        if (result.success && result.data) {
-            library = result.data.map(item => ({
+        // Xử lý dữ liệu
+        if (response && response.success && response.data) {
+            library = response.data.map(item => ({
                 name: item.Name || item.name || 'Untitled',
                 link: item.Link || item.link || '',
                 tags: item.Tags ? item.Tags.split(',').map(t => t.trim()).filter(t => t) : []
@@ -55,23 +47,43 @@ async function syncWithGoogleSheets() {
             updateSyncStatus('success', `Loaded ${library.length} documents`);
             log(`✅ Loaded ${library.length} documents from Google Sheets`, 'system');
         } else {
-            throw new Error('Invalid data format');
+            handleLibraryError('Invalid data format from server');
         }
-    } catch (error) {
-        console.error('Sync error:', error);
-        log('⚠️ Cannot connect to Google Sheets. Please check your connection.', 'system');
-        updateSyncStatus('error', 'Connection error');
-        const list = document.getElementById('libraryList');
-        if (list) {
-            list.innerHTML = `<div style="text-align: center; color: rgba(255,255,255,0.5); padding: 30px 0;">
-                ❌ Cannot connect to Google Sheets
-                <br><span style="font-size: 12px;">Please check your internet connection</span>
-            </div>`;
-        }
-        library = [];
-    } finally {
         isSyncing = false;
+    };
+
+    // Tạo thẻ <script> động để gọi JSONP (Khắc phục CORS hoàn toàn)
+    const script = document.createElement('script');
+    script.id = callbackName;
+    script.src = `${GOOGLE_SHEETS_DATA_URL}?action=get&callback=${encodeURIComponent(callbackName)}&t=${Date.now()}`;
+    
+    script.onerror = function() {
+        // Xử lý khi Script load thất bại (VD: Mạng chết)
+        handleLibraryError('Network error or server unavailable');
+        if (document.getElementById(callbackName)) {
+            document.body.removeChild(document.getElementById(callbackName));
+        }
+        delete window[callbackName];
+        isSyncing = false;
+    };
+
+    document.body.appendChild(script);
+}
+
+// Hàm xử lý lỗi chung cho Library
+function handleLibraryError(errorMsg) {
+    console.error('Sync error:', errorMsg);
+    log('⚠️ Cannot connect to Google Sheets. Please check your connection.', 'system');
+    updateSyncStatus('error', 'Connection error');
+    
+    const list = document.getElementById('libraryList');
+    if (list) {
+        list.innerHTML = `<div style="text-align: center; color: rgba(255,255,255,0.5); padding: 30px 0;">
+            ❌ Cannot connect to Google Sheets
+            <br><span style="font-size: 12px;">Please check your internet connection</span>
+        </div>`;
     }
+    library = [];
 }
 
 // ==================== GOOGLE FORM - ADD DOCUMENT ====================
@@ -100,18 +112,22 @@ async function addDocumentToGoogleSheets(doc) {
     }
 }
 
-// ==================== GOOGLE FORM - DELETE DOCUMENT ====================
-async function deleteDocumentFromGoogleSheets(index) {
+// ==================== GOOGLE APPS SCRIPT - DELETE DOCUMENT ====================
+// Lưu ý: Frontend KHÔNG chứa mật khẩu. Password sẽ được gửi lên Backend để xác thực.
+async function deleteDocumentFromGoogleSheets(index, password) {
     try {
-        const formData = new FormData();
-        formData.append('action', 'delete');
-        formData.append('index', index);
-        
         const response = await fetch(GOOGLE_SHEETS_DATA_URL, {
             method: 'POST',
             mode: 'cors',
             cache: 'no-cache',
-            body: formData
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                action: 'delete',
+                index: index,
+                password: password // Backend sẽ kiểm tra password này
+            })
         });
         
         if (!response.ok) {
@@ -119,7 +135,7 @@ async function deleteDocumentFromGoogleSheets(index) {
         }
         
         const result = await response.json();
-        return result.success;
+        return result;
     } catch (error) {
         console.error('Delete document error:', error);
         throw error;
@@ -893,8 +909,8 @@ async function addDocument() {
     }
 }
 
-// ==================== DELETE DOCUMENT WITH PASSWORD (SECURE) ====================
-const DELETE_PASSWORD = 'admin123';
+// ==================== DELETE DOCUMENT WITH PASSWORD (SECURE BACKEND CHECK) ====================
+// CHÚ Ý: Không còn mật khẩu admin123 ở đây để tránh bị lộ. Backend sẽ xác thực.
 
 function showDeletePassword(index) {
     deleteTargetIndex = index;
@@ -954,53 +970,51 @@ async function confirmDeleteWithPassword() {
     const password = passwordInput ? passwordInput.value.trim() : '';
     const errorDiv = document.getElementById('passwordError');
     
-    if (password === DELETE_PASSWORD) {
-        if (deleteTargetIndex !== null && deleteTargetIndex < library.length) {
-            const doc = library[deleteTargetIndex];
+    if (deleteTargetIndex !== null && deleteTargetIndex < library.length) {
+        const doc = library[deleteTargetIndex];
+        
+        try {
+            // Gửi mật khẩu lên Backend để xác thực an toàn
+            const result = await deleteDocumentFromGoogleSheets(deleteTargetIndex, password);
             
-            try {
-                const success = await deleteDocumentFromGoogleSheets(deleteTargetIndex);
-                
-                if (success) {
-                    library.splice(deleteTargetIndex, 1);
-                    renderLibrary();
-                    log(`🗑️ Deleted: ${doc.name}`, 'system');
-                    alert(`✅ Document "${doc.name}" deleted successfully!`);
-                    closePasswordModal();
-                    
-                    updateSyncStatus('success', `Deleted: ${doc.name}`);
-                    setTimeout(() => {
-                        updateSyncStatus('idle', `Loaded ${library.length} documents`);
-                    }, 2000);
-                } else {
-                    throw new Error('Failed to delete from Google Sheets');
-                }
-            } catch (error) {
-                console.error('Delete error:', error);
-                alert('❌ Failed to delete document from cloud. Please check your connection.');
-                log('⚠️ Failed to delete document from Google Sheets', 'system');
+            if (result.success) {
+                library.splice(deleteTargetIndex, 1);
+                renderLibrary();
+                log(`🗑️ Deleted: ${doc.name}`, 'system');
+                alert(`✅ Document "${doc.name}" deleted successfully!`);
                 closePasswordModal();
+                
+                updateSyncStatus('success', `Deleted: ${doc.name}`);
+                setTimeout(() => {
+                    updateSyncStatus('idle', `Loaded ${library.length} documents`);
+                }, 2000);
+            } else {
+                // Lỗi từ server trả về (VD: Sai mật khẩu)
+                if (errorDiv) {
+                    errorDiv.style.display = 'block';
+                    errorDiv.textContent = `❌ ${result.error || 'Delete failed'}`;
+                }
+                if (passwordInput) {
+                    passwordInput.value = '';
+                    passwordInput.focus();
+                    passwordInput.style.borderColor = '#ff7675';
+                    setTimeout(() => {
+                        if (passwordInput) {
+                            passwordInput.style.borderColor = 'rgba(255,255,255,0.1)';
+                        }
+                    }, 2000);
+                }
+                log(`❌ Delete failed: ${result.error}`, 'system');
             }
-        } else {
-            alert('⚠️ Error: Document not found');
+        } catch (error) {
+            console.error('Delete error:', error);
+            alert('❌ Failed to delete document from cloud. Please check your connection.');
+            log('⚠️ Failed to delete document from Google Sheets', 'system');
             closePasswordModal();
         }
     } else {
-        if (errorDiv) {
-            errorDiv.style.display = 'block';
-            errorDiv.textContent = '❌ Incorrect password! Please try again.';
-        }
-        if (passwordInput) {
-            passwordInput.value = '';
-            passwordInput.focus();
-            passwordInput.style.borderColor = '#ff7675';
-            setTimeout(() => {
-                if (passwordInput) {
-                    passwordInput.style.borderColor = 'rgba(255,255,255,0.1)';
-                }
-            }, 2000);
-        }
-        log(`❌ Delete failed: Incorrect password`, 'system');
+        alert('⚠️ Error: Document not found');
+        closePasswordModal();
     }
 }
 
