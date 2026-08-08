@@ -17,6 +17,10 @@ let isSyncing = false;
 let library = [];
 let deleteTargetIndex = null;
 
+// Khai báo các biến cho Voice Search trong Library (Quan trọng: Đã thêm vào đây)
+let isLibraryVoiceListening = false;
+let libraryVoiceRecognition = null;
+
 // ==================== SYNC FUNCTIONS (JSONP - ĐỌC DỮ LIỆU - CORS OK) ====================
 function syncWithGoogleSheets() {
     if (isSyncing) return;
@@ -471,7 +475,7 @@ function saveFile() {
     generateAndDownloadFile(fileName);
 }
 
-// ==================== EXPORT .MAC FILE (ĐÃ KIỂM TRA KỸ LƯỠNG) ====================
+// ==================== EXPORT .MAC FILE ====================
 function generateAndDownloadFile(fileName) {
     let px = parseInputValue("px");
     let py = parseInputValue("py");
@@ -484,13 +488,11 @@ function generateAndDownloadFile(fileName) {
     let r1 = parseInputValue("r1"); let r2 = parseInputValue("r2");
     let r3 = parseInputValue("r3"); let r4 = parseInputValue("r4");
 
-    // Tính toán toán hướng của máy
     let oriStr = "ORI Y is Y and Z is Z";
     if (ORI === "X") { oriStr = "ORI Y is -Z and Z is X"; } 
     else if (ORI === "Y") { oriStr = "ORI Y is -X and Z is Y"; } 
     else if (ORI === "Z") { oriStr = "ORI Y is Y and Z is Z"; }
 
-    // Cấu trúc file .mac đầy đủ
     let data = `NEW EQUIPMENT
 USRCOG ( X ( 0 ) Y ( 0 ) Z ( 0 ) )
 USRWCO ( X ( 0 ) Y ( 0 ) Z ( 0 ) )
