@@ -452,3 +452,98 @@ input[type=number] { -moz-appearance: textfield !important; }
     .btn { font-size: 10px; height: 34px; }
     .btn .btn-icon { font-size: 12px; }
 }
+
+/* ================================================================= */
+// === ADDED FOR CONNECTION ERROR HANDLING (Dựa trên ảnh lỗi của bạn) ===
+/* ================================================================= */
+
+/* 1. Error state cho các phần tử bị lỗi kết nối hoặc rỗng */
+.error-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px 20px;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.error-state .error-icon {
+    font-size: 36px;
+    margin-bottom: 12px;
+    color: #ff7675; /* Màu đỏ cảnh báo */
+}
+
+.error-state .error-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #ff7675;
+    margin-bottom: 4px;
+}
+
+.error-state .error-subtitle {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* 2. Connection Error Box trong Library Modal (đúng với ảnh) */
+.connection-error-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    text-align: center;
+    color: #e74c3c; /* Màu đỏ */
+    background: rgba(231, 76, 60, 0.05);
+    border-radius: 12px;
+    border: 1px solid rgba(231, 76, 60, 0.15);
+    margin: 15px auto;
+    max-width: 400px;
+}
+
+.connection-error-box .error-icon-big {
+    font-size: 42px;
+    margin-bottom: 12px;
+}
+
+.connection-error-box .main-msg {
+    font-weight: 700;
+    font-size: 15px;
+    margin-bottom: 6px;
+}
+
+.connection-error-box .sub-msg {
+    color: rgba(255,255,255,0.5);
+    font-size: 13px;
+}
+
+/* 3. Loading Spinner (Khi đang tìm nạp dữ liệu thay vì báo lỗi ngay) */
+.spinner-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 30px 0;
+}
+
+.spinner {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 3px solid rgba(255,255,255,0.05);
+    border-top-color: #6c5ce7;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* 4. Các class tiện ích chung cho thông báo */
+.text-danger { color: #ff7675 !important; }
+.text-warning { color: #fdcb6e !important; }
+.text-muted { color: rgba(255,255,255,0.4) !important; }
+.text-center { text-align: center; }
+.my-3 { margin-top: 15px; margin-bottom: 15px; }
+.mt-2 { margin-top: 10px; }
+.mb-2 { margin-bottom: 10px; }
