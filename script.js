@@ -10,7 +10,7 @@ let isSpeaking = false;
 let hasAutoTriggeredSave = false;
 
 // ==================== CONFIGURATION ====================
-// 👇 QUAN TRỌNG: Điền URL Apps Script mới bạn vừa Deploy ở Bước 1 vào đây
+// 👇 QUAN TRỌNG: Điền URL Apps Script mới bạn vừa Deploy vào đây
 const GOOGLE_SHEETS_DATA_URL = 'https://script.google.com/macros/s/AKfycbz9EF-jw28rFIkCekd6NWyCldCK9HR-YHO2pVne85D3tIdU6bBc7L-bD5-ZZULIXZbv/exec';
 
 let isSyncing = false;
@@ -463,9 +463,19 @@ function closeSaveDialog() {
     if (modal) { modal.classList.remove('active'); document.body.style.overflow = ''; hasAutoTriggeredSave = false; }
 }
 
-function confirmSave() { const fileName = document.getElementById('saveFileName').value.trim() || "Opening"; generateAndDownloadFile(fileName); closeSaveDialog(); }
+function confirmSave() { 
+    const fileName = document.getElementById('saveFileName').value.trim() || "Opening"; 
+    generateAndDownloadFile(fileName); 
+    closeSaveDialog(); 
+}
 
 // ==================== EXPORT .MAC FILE (ĐÃ KIỂM TRA KỸ LƯỠNG) ====================
+// Hàm này được gọi trực tiếp bởi nút Export (Export hoặc Save trên UI)
+function saveFile() {
+    const fileName = document.getElementById('saveFileName').value.trim() || "Opening";
+    generateAndDownloadFile(fileName);
+}
+
 function generateAndDownloadFile(fileName) {
     let px = parseInputValue("px");
     let py = parseInputValue("py");
