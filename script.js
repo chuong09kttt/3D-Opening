@@ -95,13 +95,13 @@ async function addDocumentToGoogleSheets(doc) {
     try {
         const response = await fetch(GOOGLE_SHEETS_DATA_URL, {
             method: 'POST',
-            mode: 'no-cors', // KHÔNG cần đọc phản hồi CORS, chỉ gửi đi. Trình duyệt sẽ tự gửi mà không cần Preflight.
+            mode: 'no-cors', 
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded'
             },
             body: formData
         });
-        return true; // Vì mode 'no-cors' nên response bị opaque, nhưng yêu cầu đã được gửi thành công.
+        return true; 
     } catch (error) {
         console.error('Add document via Form POST error:', error);
         throw error;
@@ -224,14 +224,13 @@ async function confirmDeleteWithPassword() {
         try {
             await deleteDocumentFromGoogleSheets(deleteTargetIndex, password);
             
-            // Vì dùng no-cors, ta không đọc được response -> Giả định thành công, xóa khỏi UI
             library.splice(deleteTargetIndex, 1);
             renderLibrary();
             log(`🗑️ Deleted: ${doc.name}`, 'system');
             closePasswordModal();
             updateSyncStatus('success', `Deleted: ${doc.name}`);
             
-            // Đợi 1 giây để Google Sheet cập nhật, sau đó xác nhận lại
+            // Đợi 1 giây để Google Sheet cập nhật
             setTimeout(() => {
                 syncWithGoogleSheets();
             }, 1000);
@@ -466,14 +465,26 @@ function closeSaveDialog() {
 
 function confirmSave() { const fileName = document.getElementById('saveFileName').value.trim() || "Opening"; generateAndDownloadFile(fileName); closeSaveDialog(); }
 
+// ==================== EXPORT .MAC FILE (ĐÃ KIỂM TRA KỸ LƯỠNG) ====================
 function generateAndDownloadFile(fileName) {
-    let px = parseInputValue("px"); let py = parseInputValue("py"); let pz = parseInputValue("pz");
-    let L = parseInputValue("dx"); let W = parseInputValue("dy"); let H = parseInputValue("dz");
-    let r1 = parseInputValue("r1"); let r2 = parseInputValue("r2"); let r3 = parseInputValue("r3"); let r4 = parseInputValue("r4");
-    let oriStr = "ORI Y is Y and Z is Z";
-    if (ORI === "X") oriStr = "ORI Y is -Z and Z is X"; 
-    else if (ORI === "Y") oriStr = "ORI Y is -X and Z is Y";
+    let px = parseInputValue("px");
+    let py = parseInputValue("py");
+    let pz = parseInputValue("pz");
 
+    let L = parseInputValue("dx");
+    let W = parseInputValue("dy");
+    let H = parseInputValue("dz");
+
+    let r1 = parseInputValue("r1"); let r2 = parseInputValue("r2");
+    let r3 = parseInputValue("r3"); let r4 = parseInputValue("r4");
+
+    // Tính toán toán hướng của máy
+    let oriStr = "ORI Y is Y and Z is Z";
+    if (ORI === "X") { oriStr = "ORI Y is -Z and Z is X"; } 
+    else if (ORI === "Y") { oriStr = "ORI Y is -X and Z is Y"; } 
+    else if (ORI === "Z") { oriStr = "ORI Y is Y and Z is Z"; }
+
+    // Cấu trúc file .mac đầy đủ
     let data = `NEW EQUIPMENT
 USRCOG ( X ( 0 ) Y ( 0 ) Z ( 0 ) )
 USRWCO ( X ( 0 ) Y ( 0 ) Z ( 0 ) )
@@ -515,9 +526,16 @@ END
 END`;
 
     let blob = new Blob([data], { type: "text/plain" });
-    let a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `${fileName}.mac`;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    let a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `${fileName}.mac`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+    
     log(`💾 Exported ${fileName}.mac successfully!`, 'system');
+    speak("Your file has been exported successfully");
 }
 
 function setOri(o) { ORI = o; document.querySelectorAll(".ori-buttons button").forEach(b => b.classList.remove("active")); document.getElementById("o" + o.toLowerCase()).classList.add("active"); document.getElementById('oriBadge').textContent = o; draw(); }
