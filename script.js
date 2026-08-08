@@ -875,26 +875,23 @@ async function addDocument() {
         // Gửi document qua Google Form
         await addDocumentToGoogleSheets(newDoc);
         
-        // Vì no-cors không cho nhận phản hồi, nên ta giả lập thành công và chờ người dùng tự refresh
-        library.push(newDoc);
-        renderLibrary();
+        // XÓA DÒNG library.push(newDoc). Để tránh dữ liệu ảo biến mất khi người dùng chưa kịp refresh.
         
+        // Reset input
         nameInput.value = '';
         linkInput.value = '';
         tagsInput.value = '';
         
-        // Cập nhật giao diện (Không dùng alert nữa để tránh giật mình)
+        // Cập nhật giao diện
         log(`📤 Document "${name}" submitted via Google Form`, 'system');
-        updateSyncStatus('success', `Submitted "${name}" to Form. Please refresh later!`);
-        speak(`Document ${name} submitted. Please refresh in a few seconds.`);
+        
+        // Thay thế thông báo alert bằng thông báo trên thanh trạng thái
+        updateSyncStatus('success', `✅ Submitted "${name}" to Form. Click Refresh to see!`);
+        speak(`Document ${name} submitted. Click Refresh to see.`);
         nameInput.focus();
         
-        // Đã tắt tự động refresh, để người dùng tự nhấn Refresh khi dữ liệu đã có trên Sheet
-        // Thông báo dạng đồ họa mượt hơn (Thay vì alert bật lên)
-        document.querySelector('.control-group:last-child .group-header h3').innerHTML = '📤 Submitted!';
-        setTimeout(() => {
-            document.querySelector('.control-group:last-child .group-header h3').innerHTML = 'Add New Document';
-        }, 3000);
+        // Không tự động Refresh nữa, để người dùng chủ động nhấn nút Refresh
+        // Hướng dẫn người dùng nhấn Refresh thủ công
         
     } catch (error) {
         console.error('Add document error:', error);
