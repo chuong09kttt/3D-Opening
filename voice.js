@@ -1,17 +1,15 @@
 /* =========================================
    FILE: voice.js
-   Xử lý riêng biệt Voice cho 3D và Library
+   Voice 3D & Text-to-Speech chung
    ========================================= */
 
-let recognition3D = null;
-let recognitionLibrary = null;
-
+// 1. Biến trạng thái VOICE 3D (Nằm riêng biệt trong file này)
 let is3DListening = false;
-let isLibraryVoiceListening = false;
+let recognition3D = null;
 
-// Hàm nói (Text-to-Speech tiếng Việt)
+// 2. Hàm nói (Text-to-Speech) tiếng Việt - Dùng chung
 function speak(text, callback) {
-    window.speechSynthesis.cancel(); // Dừng mọi giọng nói hiện tại
+    window.speechSynthesis.cancel();
     let u = new SpeechSynthesisUtterance(text);
     u.lang = "vi-VN";
     u.rate = 0.95;
@@ -20,16 +18,12 @@ function speak(text, callback) {
     u.onend = () => { if (callback) callback(); };
     window.speechSynthesis.speak(u);
 }
+window.speak = speak; // Treo lên window để file khác dùng
 
-// ===================================================
-// 1. VOICE CHO 3D MODEL (Xử lý thông số kỹ thuật)
-// ===================================================
+// 3. Khởi tạo Voice 3D
 function initVoice3D() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) {
-        alert("❌ Trình duyệt không hỗ trợ nhận diện giọng nói!");
-        return null;
-    }
+    if (!SR) { alert("❌ Trình duyệt không hỗ trợ nhận diện giọng nói!"); return null; }
     const r = new SR();
     r.lang = "vi-VN";
     r.continuous = true;
@@ -41,7 +35,6 @@ function initVoice3D() {
         document.getElementById('chatStatus').textContent = '● Đang nghe...';
         document.getElementById('chatStatus').classList.add('waiting');
     };
-
     r.onend = () => {
         if (is3DListening) {
             try { r.start(); } catch(e) {}
@@ -51,17 +44,12 @@ function initVoice3D() {
             document.getElementById('chatStatus').classList.remove('waiting');
         }
     };
-
     r.onerror = (e) => {
-        if (e.error === 'not-allowed') {
-            alert("❌ Bạn chưa cấp quyền truy cập Micro.");
-            stopVoice3D();
-        }
+        if (e.error === 'not-allowed') { alert("❌ Bạn chưa cấp quyền truy cập Micro."); stopVoice3D(); }
         if (is3DListening && e.error !== 'not-allowed') {
             try { setTimeout(() => { r.start(); }, 300); } catch(e) {}
         }
     };
-
     r.onresult = (e) => {
         let finalText = '';
         for (let i = e.resultIndex; i < e.results.length; i++) {
@@ -69,17 +57,15 @@ function initVoice3D() {
                 finalText += e.results[i][0].transcript.trim() + ' ';
             }
         }
-        if (finalText) {
-            // Gọi hàm xử lý thông số kỹ thuật nằm trong script.js
-            if (typeof processFullVoiceNLP === 'function') {
-                processFullVoiceNLP(finalText.trim());
-            }
+        if (finalText && typeof processFullVoiceNLP === 'function') {
+            processFullVoiceNLP(finalText.trim());
         }
     };
     return r;
 }
 
-function toggleVoice3D() {
+// 4. Hàm Bật/Tắt Voice 3D (Gắn vào HTML)
+function voice() {
     if (is3DListening) {
         stopVoice3D();
         return;
@@ -88,103 +74,18 @@ function toggleVoice3D() {
         recognition3D = initVoice3D();
         if (!recognition3D) return;
     }
-    // Lời chào tiếng Việt khi bật Voice 3D
+    // Lời chào tiếng Việt
     speak("Xin chào, tôi có thể giúp gì cho bạn?", () => {
-        try {
-            recognition3D.start();
-        } catch(e) {
-            // Nếu bị lỗi đang chạy, dừng lại rồi chạy lại
-            try { recognition3D.stop(); setTimeout(() => { recognition3D.start(); }, 100); } catch(e2) {}
-        }
+        try { recognition3D.start(); } 
+        catch(e) { try { recognition3D.stop(); setTimeout(() => { recognition3D.start(); }, 100); } catch(e2) {} }
     });
 }
+window.voice = voice; // Gán ra toàn cục cho HTML gọi
 
 function stopVoice3D() {
     is3DListening = false;
-    if (recognition3D) {
-        try { recognition3D.stop(); } catch(e) {}
-    }
+    if (recognition3D) { try { recognition3D.stop(); } catch(e) {} }
     document.getElementById('voiceBtn').classList.remove('listening');
     document.getElementById('chatStatus').textContent = '● Sẵn sàng';
     document.getElementById('chatStatus').classList.remove('waiting');
-}
-
-
-// ===================================================
-// 2. VOICE CHO LIBRARY (Tìm kiếm tài liệu)
-// ===================================================
-function initVoiceLibrary() {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) {
-        alert("❌ Trình duyệt không hỗ trợ nhận diện giọng nói!");
-        return null;
-    }
-    const r = new SR();
-    r.lang = "vi-VN"; // Nghe tiếng Việt
-    r.continuous = false;
-    r.interimResults = true;
-
-    r.onstart = () => {
-        isLibraryVoiceListening = true;
-        document.getElementById('voiceSearchBtn').classList.add('listening');
-        document.getElementById('voiceSearchBtn').innerHTML = '<span class="btn-icon">⏹</span> Dừng';
-    };
-
-    r.onend = () => {
-        stopVoiceLibrary();
-    };
-
-    r.onerror = (e) => {
-        if (e.error !== 'no-speech') {
-            console.log(`⚠️ Lỗi mic Library: ${e.error}`);
-        }
-        stopVoiceLibrary();
-    };
-
-    r.onresult = (e) => {
-        let transcript = '';
-        for (let i = e.resultIndex; i < e.results.length; i++) {
-            transcript += e.results[i][0].transcript;
-            if (e.results[i].isFinal) {
-                document.getElementById('searchQuery').value = transcript;
-                // Gọi hàm tìm kiếm nằm trong script.js
-                if (typeof searchDocuments === 'function') {
-                    searchDocuments();
-                }
-                stopVoiceLibrary();
-            }
-        }
-    };
-    return r;
-}
-
-function toggleVoiceLibrary() {
-    if (isLibraryVoiceListening) {
-        stopVoiceLibrary();
-        return;
-    }
-    if (!recognitionLibrary) {
-        recognitionLibrary = initVoiceLibrary();
-        if (!recognitionLibrary) return;
-    }
-    // Lời chào tiếng Việt khi bật Voice Library
-    speak("Hãy nói tên tài liệu bạn muốn tìm kiếm nhé", () => {
-        try {
-            recognitionLibrary.start();
-        } catch(e) {
-            try { recognitionLibrary.stop(); setTimeout(() => { recognitionLibrary.start(); }, 100); } catch(e2) {}
-        }
-    });
-}
-
-function stopVoiceLibrary() {
-    isLibraryVoiceListening = false;
-    if (recognitionLibrary) {
-        try { recognitionLibrary.stop(); } catch(e) {}
-    }
-    const btn = document.getElementById('voiceSearchBtn');
-    if (btn) {
-        btn.classList.remove('listening');
-        btn.innerHTML = '<span class="btn-icon">🎤</span> Voice';
-    }
 }
