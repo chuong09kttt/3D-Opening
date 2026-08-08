@@ -10,7 +10,7 @@ let isSpeaking = false;
 let hasAutoTriggeredSave = false;
 
 // ==================== CONFIGURATION ====================
-// 👇 QUAN TRỌNG: Điền URL Apps Script mới bạn vừa Deploy vào đây
+// 👇 QUAN TRỌNG: Điền URL Apps Script mới nhất bạn vừa Deploy vào đây
 const GOOGLE_SHEETS_DATA_URL = 'https://script.google.com/macros/s/AKfycbz9EF-jw28rFIkCekd6NWyCldCK9HR-YHO2pVne85D3tIdU6bBc7L-bD5-ZZULIXZbv/exec';
 
 let isSyncing = false;
@@ -152,10 +152,8 @@ async function addDocument() {
     const newDoc = { name, link, tags };
     
     try {
-        // Gửi dạng x-www-form-urlencoded (Không bị CORS)
         await addDocumentToGoogleSheets(newDoc);
         
-        // Vì dùng no-cors, ta tạm thêm ảo vào Library để hiển thị ngay
         library.push(newDoc);
         renderLibrary();
         
@@ -166,7 +164,6 @@ async function addDocument() {
         log(`📤 Document "${name}" submitted via Form Post`, 'system');
         updateSyncStatus('success', `Sent "${name}". Will auto-refresh.`);
         
-        // Đợi 1.5 giây để Google Sheet cập nhật, sau đó dùng JSONP tải lại để xác nhận dữ liệu thật
         setTimeout(() => {
             syncWithGoogleSheets();
         }, 1500);
@@ -230,7 +227,6 @@ async function confirmDeleteWithPassword() {
             closePasswordModal();
             updateSyncStatus('success', `Deleted: ${doc.name}`);
             
-            // Đợi 1 giây để Google Sheet cập nhật
             setTimeout(() => {
                 syncWithGoogleSheets();
             }, 1000);
@@ -469,13 +465,13 @@ function confirmSave() {
     closeSaveDialog(); 
 }
 
-// ==================== EXPORT .MAC FILE (ĐÃ KIỂM TRA KỸ LƯỠNG) ====================
-// Hàm này được gọi trực tiếp bởi nút Export (Export hoặc Save trên UI)
+// ==================== HÀM QUAN TRỌNG BỊ THIẾU (Nút Export gọi hàm này) ====================
 function saveFile() {
     const fileName = document.getElementById('saveFileName').value.trim() || "Opening";
     generateAndDownloadFile(fileName);
 }
 
+// ==================== EXPORT .MAC FILE (ĐÃ KIỂM TRA KỸ LƯỠNG) ====================
 function generateAndDownloadFile(fileName) {
     let px = parseInputValue("px");
     let py = parseInputValue("py");
