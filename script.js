@@ -1,10 +1,7 @@
 /* =========================================
-   FILE: script.js (Module)
-   3D Model & Voice 3D
+   FILE: script.js
+   3D Model, Export, và Logic chính
    ========================================= */
-
-import { speak } from './voice.js';
-import { openLibrary, searchDocuments, addDocument, showDeletePassword, closePasswordModal, confirmDeleteWithPassword, closeLibrary, voiceSearchLibrary } from './library.js';
 
 const c = document.getElementById("view");
 const ctx = c.getContext("2d");
@@ -12,63 +9,14 @@ const ctx = c.getContext("2d");
 let ORI = "Z";
 let hasAutoTriggeredSave = false;
 
-// Voice 3D
-let is3DListening = false;
-let recognition3D = null;
+const GOOGLE_SHEETS_DATA_URL = 'https://script.google.com/macros/s/AKfycbz9EF-jw28rFIkCekd6NWyCldCK9HR-YHO2pVne85D3tIdU6bBc7L-bD5-ZZULIXZbv/exec';
 
-// ==================== CONFIGURATION ====================
-const GOOGLE_SHEETS_DATA_URL = 'https://script.google.com/macros/s/THAY_URL_CUA_BAN_VAO_DAY/exec';
-
-// ==================== VOICE 3D ====================
-function initVoice3D() {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) { alert("❌ Trình duyệt không hỗ trợ nhận diện giọng nói!"); return null; }
-    const r = new SR();
-    r.lang = "vi-VN"; r.continuous = true; r.interimResults = true;
-
-    r.onstart = () => {
-        is3DListening = true;
-        document.getElementById('voiceBtn').classList.add('listening');
-        document.getElementById('chatStatus').textContent = '● Đang nghe...';
-    };
-    r.onend = () => {
-        if (is3DListening) { try { r.start(); } catch(e) {} } 
-        else { document.getElementById('voiceBtn').classList.remove('listening'); document.getElementById('chatStatus').textContent = '● Sẵn sàng'; }
-    };
-    r.onerror = () => { if (is3DListening) { try { setTimeout(() => { r.start(); }, 300); } catch(e) {} } };
-    r.onresult = (e) => {
-        let finalText = '';
-        for (let i = e.resultIndex; i < e.results.length; i++) {
-            if (e.results[i].isFinal) finalText += e.results[i][0].transcript.trim() + ' ';
-        }
-        if (finalText && typeof processFullVoiceNLP === 'function') {
-            processFullVoiceNLP(finalText.trim());
-        }
-    };
-    return r;
-}
-
-export function voice() {
-    if (is3DListening) { stopVoice3D(); return; }
-    if (!recognition3D) { recognition3D = initVoice3D(); if (!recognition3D) return; }
-    speak("Xin chào, tôi có thể giúp gì cho bạn?", () => {
-        try { recognition3D.start(); } 
-        catch(e) { try { recognition3D.stop(); setTimeout(() => { recognition3D.start(); }, 100); } catch(e2) {} }
-    });
-}
-
-function stopVoice3D() {
-    is3DListening = false;
-    if (recognition3D) { try { recognition3D.stop(); } catch(e) {} }
-    document.getElementById('voiceBtn').classList.remove('listening');
-    document.getElementById('chatStatus').textContent = '● Sẵn sàng';
-}
-
-// ==================== EXPORT FUNCTIONS ====================
-export function saveFile() {
+// ==================== EXPORT & SAVE ====================
+function saveFile() {
     const fileName = document.getElementById('saveFileName').value.trim() || "Opening";
     generateAndDownloadFile(fileName);
 }
+window.saveFile = saveFile;
 
 function generateAndDownloadFile(fileName) {
     let px = parseInputValue("px"); let py = parseInputValue("py"); let pz = parseInputValue("pz");
@@ -119,10 +67,17 @@ END`;
     speak("File của bạn đã được xuất thành công");
 }
 
-// ==================== 3D DRAWING ====================
-export function setOri(o) { ORI = o; document.querySelectorAll(".ori-buttons button").forEach(b => b.classList.remove("active")); document.getElementById("o" + o.toLowerCase()).classList.add("active"); document.getElementById('oriBadge').textContent = o; draw(); }
+// ==================== 3D UI FUNCTIONS ====================
+function setOri(o) { 
+    ORI = o; 
+    document.querySelectorAll(".ori-buttons button").forEach(b => b.classList.remove("active")); 
+    document.getElementById("o" + o.toLowerCase()).classList.add("active"); 
+    document.getElementById('oriBadge').textContent = o; 
+    draw(); 
+}
+window.setOri = setOri;
 
-export function parseInputValue(id) {
+function parseInputValue(id) {
     let raw = (document.getElementById(id).value || "").toString().trim();
     if (!raw) return 0;
     if (/^\d+[.,]\d{3}$/.test(raw)) raw = raw.replace(/[.,]/g, '');
@@ -130,7 +85,7 @@ export function parseInputValue(id) {
     return parseFloat(raw) || 0;
 }
 
-export function autoSaveDialog() {
+function autoSaveDialog() {
     if (hasAutoTriggeredSave) return;
     let L = parseInputValue("dx"); let W = parseInputValue("dy"); let T = parseInputValue("dz");
     if (L > 0 && W > 0 && T > 0) {
@@ -141,24 +96,31 @@ export function autoSaveDialog() {
     }
 }
 
-export function closeSaveDialog() {
+function closeSaveDialog() {
     document.getElementById('saveModal').classList.remove('active');
     document.body.style.overflow = '';
     hasAutoTriggeredSave = false;
 }
+window.closeSaveDialog = closeSaveDialog;
 
-export function confirmSave() { saveFile(); closeSaveDialog(); }
+function confirmSave() { saveFile(); closeSaveDialog(); }
+window.confirmSave = confirmSave;
 
-export function reset() {
+function reset() {
     document.getElementById("px").value = 0; document.getElementById("py").value = 0; document.getElementById("pz").value = 0;
     document.getElementById("dx").value = 0; document.getElementById("dy").value = 0; document.getElementById("dz").value = 0;
     document.getElementById("r1").value = 150; document.getElementById("r2").value = 150; document.getElementById("r3").value = 150; document.getElementById("r4").value = 150;
     hasAutoTriggeredSave = false; setOri('Z');
 }
+window.reset = reset;
 
-export function help() { document.getElementById('helpModal').classList.add('active'); document.body.style.overflow = 'hidden'; }
-export function closeHelp() { document.getElementById('helpModal').classList.remove('active'); document.body.style.overflow = ''; }
+function help() { document.getElementById('helpModal').classList.add('active'); document.body.style.overflow = 'hidden'; }
+window.help = help;
 
+function closeHelp() { document.getElementById('helpModal').classList.remove('active'); document.body.style.overflow = ''; }
+window.closeHelp = closeHelp;
+
+// ==================== 3D DRAW ====================
 function draw() {
     c.width = c.offsetWidth; c.height = c.offsetHeight || 320;
     let L = parseInputValue("dx"); let W = parseInputValue("dy"); let T = parseInputValue("dz");
@@ -250,3 +212,4 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     draw();
 });
+window.addEventListener("resize", draw);
