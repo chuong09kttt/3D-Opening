@@ -1,11 +1,9 @@
 /* =========================================
-   FILE: library.js (Module)
-   Quản lý Library
+   FILE: library.js
+   Quản lý Library & Voice tìm kiếm
    ========================================= */
 
-import { speak } from './voice.js';
-
-// Biến dùng riêng cho Library
+// 1. Biến trạng thái riêng cho Library
 let isSyncing = false;
 let library = [];
 let deleteTargetIndex = null;
@@ -13,12 +11,12 @@ let deleteTargetIndex = null;
 let isLibraryVoiceListening = false;
 let libraryVoiceRecognition = null;
 
-// Hàm tải dữ liệu (Dùng JSONP)
-export function syncWithGoogleSheets() {
+const GOOGLE_SHEETS_DATA_URL = 'https://script.google.com/macros/s/THAY_URL_CUA_BAN_VAO_DAY/exec';
+
+// 2. Load dữ liệu (JSONP)
+function syncWithGoogleSheets() {
     if (isSyncing) return;
     isSyncing = true;
-    updateSyncStatus('syncing', 'Loading data...');
-    
     const callbackName = 'jsonpCallback_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     window[callbackName] = function(response) {
         const scriptEl = document.getElementById(callbackName);
@@ -32,9 +30,6 @@ export function syncWithGoogleSheets() {
                 tags: item.Tags ? item.Tags.split(',').map(t => t.trim()).filter(t => t) : []
             }));
             renderLibrary();
-            updateSyncStatus('success', `Loaded ${library.length} documents`);
-        } else {
-            handleLibraryError('Invalid data format from server');
         }
         isSyncing = false;
     };
@@ -43,40 +38,15 @@ export function syncWithGoogleSheets() {
     script.id = callbackName;
     script.src = `${GOOGLE_SHEETS_DATA_URL}?action=get&callback=${encodeURIComponent(callbackName)}&t=${Date.now()}`;
     script.onerror = function() {
-        handleLibraryError('Network error');
-        if (document.getElementById(callbackName)) document.body.removeChild(document.getElementById(callbackName));
-        delete window[callbackName];
+        const list = document.getElementById('libraryList');
+        if (list) list.innerHTML = `<div style="text-align: center; color: rgba(255,255,255,0.5); padding: 30px 0;">❌ Cannot connect to Google Sheets</div>`;
         isSyncing = false;
     };
     document.body.appendChild(script);
 }
 
-function handleLibraryError(errorMsg) {
-    console.error('Sync error:', errorMsg);
-    updateSyncStatus('error', 'Connection error');
-    const list = document.getElementById('libraryList');
-    if (list) {
-        list.innerHTML = `<div style="text-align: center; color: rgba(255,255,255,0.5); padding: 30px 0;">❌ Cannot connect to Google Sheets</div>`;
-    }
-    library = [];
-}
-
-function updateSyncStatus(status, text) {
-    const icon = document.getElementById('syncIcon');
-    const textEl = document.getElementById('syncText');
-    const statusEl = document.getElementById('syncStatus');
-    if (!icon || !textEl || !statusEl) return;
-    
-    switch(status) {
-        case 'syncing': icon.textContent = '🔄'; textEl.textContent = text; statusEl.style.borderColor = 'rgba(0,210,255,0.3)'; statusEl.style.background = 'rgba(0,210,255,0.05)'; break;
-        case 'success': icon.textContent = '✅'; textEl.textContent = text; statusEl.style.borderColor = 'rgba(0,255,0,0.3)'; statusEl.style.background = 'rgba(0,255,0,0.05)'; break;
-        case 'error': icon.textContent = '❌'; textEl.textContent = text; statusEl.style.borderColor = 'rgba(255,0,0,0.3)'; statusEl.style.background = 'rgba(255,0,0,0.05)'; break;
-        default: icon.textContent = '✅'; textEl.textContent = text || 'Ready'; statusEl.style.borderColor = 'rgba(0,210,255,0.1)'; statusEl.style.background = 'rgba(0,210,255,0.05)';
-    }
-}
-
-// --- UI THƯ VIỆN ---
-export function renderLibrary(filteredList = null) {
+// 3. UI Render
+function renderLibrary(filteredList = null) {
     const list = document.getElementById('libraryList');
     if (!list) return;
     const docs = filteredList || library;
@@ -93,14 +63,15 @@ export function renderLibrary(filteredList = null) {
     }).join('');
 }
 
-export function openDocument(index) {
+function openDocument(index) {
     const doc = library[index];
     if (doc && doc.link) {
         if (doc.link.startsWith('http://') || doc.link.startsWith('https://')) window.open(doc.link, '_blank');
     } else alert('⚠️ Document not found');
 }
 
-export function openLibrary() {
+// 4. Các hàm điều hướng và tìm kiếm (Gán vào window)
+function openLibrary() {
     const modal = document.getElementById('libraryModal');
     if (modal) {
         modal.classList.add('active');
@@ -111,33 +82,30 @@ export function openLibrary() {
         syncWithGoogleSheets();
     }
 }
+window.openLibrary = openLibrary;
 
-export function closeLibrary() {
+function closeLibrary() {
     const modal = document.getElementById('libraryModal');
-    if (modal) {
-        modal.classList.remove('active');
-        document.body.style.overflow = '';
-        closePasswordModal();
-        stopLibraryVoice();
-    }
+    if (modal) { modal.classList.remove('active'); document.body.style.overflow = ''; stopLibraryVoice(); }
 }
+window.closeLibrary = closeLibrary;
 
-// --- TÌM KIẾM ---
-export function searchDocuments() {
+function searchDocuments() {
     const query = document.getElementById('searchQuery').value.trim();
     if (!query) { renderLibrary(); document.getElementById('searchResults').style.display = 'none'; return; }
     const results = performSmartSearch(query);
     const resultsDiv = document.getElementById('searchResults');
     if (results.length === 0) {
         resultsDiv.style.display = 'block';
-        resultsDiv.innerHTML = `<div style="text-align: center; color: rgba(255,255,255,0.5); padding: 15px 0;">🔍 No documents found for "${query}"</div>`;
+        resultsDiv.innerHTML = `<div style="text-align: center; color: rgba(255,255,255,0.5); padding: 15px 0;">🔍 No documents found</div>`;
         renderLibrary();
         return;
     }
     resultsDiv.style.display = 'block';
-    resultsDiv.innerHTML = `<div style="color: rgba(255,255,255,0.6); font-size: 12px;">✅ Found ${results.length} result(s)</div>`;
+    resultsDiv.innerHTML = `<div style="color: rgba(255,255,255,0.6);">✅ Found ${results.length} result(s)</div>`;
     renderLibrary(results);
 }
+window.searchDocuments = searchDocuments;
 
 function performSmartSearch(query) {
     const q = query.toLowerCase().trim();
@@ -157,12 +125,15 @@ function performSmartSearch(query) {
     return scored.filter(item => item.score > 0).sort((a, b) => b.score - a.score).map(item => item.doc);
 }
 
-// --- VOICE LIBRARY ---
+// 5. Voice riêng cho Library
 function initVoiceLibrary() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) return null;
+    if (!SR) { alert("❌ Trình duyệt không hỗ trợ nhận diện giọng nói!"); return null; }
     const r = new SR();
-    r.lang = "vi-VN"; r.continuous = false; r.interimResults = true;
+    r.lang = "vi-VN";
+    r.continuous = false;
+    r.interimResults = true;
+
     r.onstart = () => {
         isLibraryVoiceListening = true;
         document.getElementById('voiceSearchBtn').classList.add('listening');
@@ -176,13 +147,27 @@ function initVoiceLibrary() {
             transcript += e.results[i][0].transcript;
             if (e.results[i].isFinal) {
                 document.getElementById('searchQuery').value = transcript;
-                searchDocuments();
+                if (typeof searchDocuments === 'function') searchDocuments();
                 stopLibraryVoice();
             }
         }
     };
     return r;
 }
+
+function voiceSearchLibrary() {
+    if (isLibraryVoiceListening) { stopLibraryVoice(); return; }
+    if (!libraryVoiceRecognition) {
+        libraryVoiceRecognition = initVoiceLibrary();
+        if (!libraryVoiceRecognition) return;
+    }
+    // Lời chào tiếng Việt riêng cho Library
+    speak("Hãy nói tên tài liệu bạn muốn tìm kiếm nhé", () => {
+        try { libraryVoiceRecognition.start(); } 
+        catch(e) { try { libraryVoiceRecognition.stop(); setTimeout(() => { libraryVoiceRecognition.start(); }, 100); } catch(e2) {} }
+    });
+}
+window.voiceSearchLibrary = voiceSearchLibrary;
 
 function stopLibraryVoice() {
     isLibraryVoiceListening = false;
@@ -194,17 +179,8 @@ function stopLibraryVoice() {
     }
 }
 
-export function voiceSearchLibrary() {
-    if (isLibraryVoiceListening) { stopLibraryVoice(); return; }
-    if (!libraryVoiceRecognition) { libraryVoiceRecognition = initVoiceLibrary(); if (!libraryVoiceRecognition) return; }
-    speak("Hãy nói tên tài liệu bạn muốn tìm kiếm nhé", () => {
-        try { libraryVoiceRecognition.start(); } 
-        catch(e) { try { libraryVoiceRecognition.stop(); setTimeout(() => { libraryVoiceRecognition.start(); }, 100); } catch(e2) {} }
-    });
-}
-
-// --- ADD/ DELETE ---
-export async function addDocument() {
+// 6. Add & Delete
+function addDocument() {
     const nameInput = document.getElementById('newDocName');
     const linkInput = document.getElementById('newDocLink');
     const tagsInput = document.getElementById('newDocTags');
@@ -217,15 +193,16 @@ export async function addDocument() {
     try {
         const formData = new URLSearchParams();
         formData.append('action', 'add'); formData.append('name', name); formData.append('link', link); formData.append('tags', tags.join(', '));
-        await fetch(GOOGLE_SHEETS_DATA_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: formData });
+        fetch(GOOGLE_SHEETS_DATA_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: formData });
         library.push({ name, link, tags });
         renderLibrary();
         nameInput.value = ''; linkInput.value = ''; tagsInput.value = '';
         setTimeout(() => { syncWithGoogleSheets(); }, 1500);
     } catch (error) { alert('❌ Lỗi thêm tài liệu'); }
 }
+window.addDocument = addDocument;
 
-export function showDeletePassword(index) {
+function showDeletePassword(index) {
     deleteTargetIndex = index;
     const doc = library[index];
     if (!doc) return alert('Tài liệu không tồn tại');
@@ -247,20 +224,22 @@ export function showDeletePassword(index) {
     document.body.appendChild(passwordModal);
     setTimeout(() => { document.getElementById('deletePasswordInput').focus(); }, 200);
 }
+window.showDeletePassword = showDeletePassword;
 
-export function closePasswordModal() {
+function closePasswordModal() {
     const modal = document.getElementById('passwordModal');
     if (modal) modal.remove();
     deleteTargetIndex = null;
 }
+window.closePasswordModal = closePasswordModal;
 
-export async function confirmDeleteWithPassword() {
+function confirmDeleteWithPassword() {
     const password = document.getElementById('deletePasswordInput').value.trim();
     if (deleteTargetIndex !== null && deleteTargetIndex < library.length) {
         try {
             const formData = new URLSearchParams();
             formData.append('action', 'delete'); formData.append('index', deleteTargetIndex); formData.append('password', password);
-            await fetch(GOOGLE_SHEETS_DATA_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: formData });
+            fetch(GOOGLE_SHEETS_DATA_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: formData });
             library.splice(deleteTargetIndex, 1);
             renderLibrary();
             closePasswordModal();
@@ -268,3 +247,4 @@ export async function confirmDeleteWithPassword() {
         } catch (error) { alert('❌ Lỗi xóa tài liệu'); closePasswordModal(); }
     }
 }
+window.confirmDeleteWithPassword = confirmDeleteWithPassword;
