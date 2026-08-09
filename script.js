@@ -46,7 +46,7 @@ function syncWithGoogleSheets() {
             renderLibrary();
             updateCategoryCounts();
             updateSyncStatus('success', 'Loaded ' + library.length + ' documents');
-            log('✅ Loaded ' + library.length + ' documents from Google Sheets', 'system');
+            log('✅ Loaded ' + library.length + ' documents', 'system');
         } else {
             handleLibraryError('Invalid data format from server');
         }
@@ -296,8 +296,8 @@ function addDocument() {
         linkInput.value = '';
         tagsInput.value = '';
         
-        log('📤 Document "' + name + '" submitted to ' + category + ' / ' + department, 'system');
-        updateSyncStatus('success', 'Sent "' + name + '". Will auto-refresh.');
+        log('📤 Document "' + name + '" added successfully', 'system');
+        updateSyncStatus('success', 'Added "' + name + '"');
         
         setTimeout(function() {
             syncWithGoogleSheets();
@@ -432,11 +432,12 @@ function renderLibrary(filteredList) {
             tagsHtml += '</div>';
         }
         var categoryLabel = doc.category || 'Others';
+        var deptLabel = doc.department || 'Others';
         html += '<div class="doc-item">' +
             '<span class="doc-icon">📄</span>' +
             '<div class="doc-info">' +
                 '<div class="doc-name">' + doc.name + '</div>' +
-                '<div class="doc-meta">' + categoryLabel + '</div>' +
+                '<div class="doc-meta">' + categoryLabel + ' • ' + deptLabel + '</div>' +
                 tagsHtml +
             '</div>' +
             '<div class="doc-actions">' +
@@ -626,6 +627,10 @@ function initVoice() {
         document.getElementById('chatStatus').textContent = '● Listening...';
         document.getElementById('chatStatus').classList.add('waiting');
         log("🎤 Listening...", 'system');
+        // Gửi lời chào khi bắt đầu voice
+        var greeting = "Xin chào, bạn hãy đọc các thông số kích thước nhé";
+        log("🤖 " + greeting, 'assistant');
+        speak(greeting);
         partialTranscript = ''; 
         hasAutoTriggeredSave = false;
     };
@@ -820,7 +825,11 @@ function generateAndDownloadFile(fileName) {
     document.body.appendChild(a); 
     a.click(); 
     document.body.removeChild(a);
-    log('💾 Exported ' + fileName + '.mac successfully!', 'system');
+    
+    // Thông báo xuất file thành công
+    var successMsg = "✅ Đã xuất file " + fileName + ".mac thành công!";
+    log(successMsg, 'system');
+    speak("Đã xuất file thành công");
 }
 
 function setOri(o) { 
@@ -862,8 +871,9 @@ function draw() {
     var l = L * scale; 
     var w = W * scale; 
     var t = T * scale;
+    // Dịch trục tọa độ lên cao để không bị khuất
     var cx = c.width / 2 - 20 + (posX * scale); 
-    var cy = c.height / 2 + 30 - (posZ * scale);
+    var cy = c.height / 2 - 10 - (posZ * scale);
     var vX, vY, vZ;
     if (ORI === "Z") { vX = l; vY = w; vZ = t; } 
     else if (ORI === "X") { vX = t; vY = w; vZ = l; } 
@@ -874,7 +884,8 @@ function draw() {
 function drawAxis() {
     ctx.lineWidth = 2.5; 
     ctx.font = "bold 13px Inter, sans-serif";
-    var x0 = 50, y0 = 220;
+    // Dịch trục lên cao hơn
+    var x0 = 50, y0 = 230;
     ctx.strokeStyle = "#ff6b6b"; 
     ctx.fillStyle = "#ff6b6b"; 
     ctx.shadowColor = "rgba(255,107,107,0.3)"; 
@@ -1087,6 +1098,10 @@ function voiceSearchLibrary() {
             document.getElementById('voiceSearchBtn').classList.add('listening');
             document.getElementById('voiceSearchBtn').innerHTML = '<span class="btn-icon">⏹</span>';
             log("🎤 Listening for search query...", 'system');
+            // Hỏi bằng tiếng Việt
+            var question = "Bạn muốn tìm kiếm thông tin gì?";
+            log("🤖 " + question, 'assistant');
+            speak(question);
         };
         
         libraryVoiceRecognition.onend = function() {
@@ -1102,12 +1117,20 @@ function voiceSearchLibrary() {
         
         libraryVoiceRecognition.onresult = function(e) {
             var transcript = '';
+            var isVietnamese = false;
             for (var i = e.resultIndex; i < e.results.length; i++) {
-                transcript += e.results[i][0].transcript;
+                var text = e.results[i][0].transcript;
+                transcript += text;
+                // Kiểm tra xem có phải tiếng Việt không (có dấu)
+                if (/[áàảãạăắằẳẵặâấầẩẫậđéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵ]/i.test(text)) {
+                    isVietnamese = true;
+                }
                 if (e.results[i].isFinal) {
+                    // Nếu là tiếng Việt thì để nguyên, nếu tiếng Anh thì giữ nguyên
                     document.getElementById('searchQuery').value = transcript;
                     applyFilters();
-                    log('🔍 Voice search: "' + transcript + '"', 'user');
+                    var lang = isVietnamese ? '🔍 Tìm kiếm: "' : '🔍 Search: "';
+                    log(lang + transcript + '"', 'user');
                     stopLibraryVoice();
                 }
             }
@@ -1187,5 +1210,5 @@ window.addEventListener("resize", draw);
 // ==================== STARTUP ====================
 draw();
 log("🚀 3D Opening Tool Pro ready", 'system');
-log("📚 Press Library button to manage Drive documents", 'system');
-log("✅ Apps Script URL: " + GOOGLE_SHEETS_DATA_URL, 'system');
+log("📚 Press Library button to manage documents", 'system');
+// Đã xóa 2 dòng hiển thị URL và Google Sheets
