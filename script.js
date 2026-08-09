@@ -10,8 +10,8 @@ let isSpeaking = false;
 let hasAutoTriggeredSave = false;
 
 // ==================== CONFIGURATION ====================
-const GOOGLE_SHEETS_DATA_URL = 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec';
-const TOOL_DOWNLOAD_URL = 'https://drive.google.com/drive/folders/YOUR_FOLDER_ID'; // Thay bằng link Drive của bạn
+const GOOGLE_SHEETS_DATA_URL = 'https://script.google.com/macros/s/AKfycbxKyUDePk4oFjbnt4Sa6NDzQ7ek3M1LHw00tVRYbEy_rRILlgYpd86ycN-eKirNh9BO/exec';
+const TOOL_DOWNLOAD_URL = 'https://drive.google.com/file/d/14NNDzXSCG63m1yQZb51tZhrZfd5k8KPf/view'; // Thay bằng link Drive của bạn
 
 let isSyncing = false;
 let library = [];
