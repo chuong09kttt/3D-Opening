@@ -1098,6 +1098,8 @@ function closeHelp() {
     } 
 }
 
+
+
 // ==================== LIBRARY VOICE SEARCH ====================
 function voiceSearchLibrary() {
     if (isLibraryVoiceListening) {
@@ -1114,7 +1116,7 @@ function voiceSearchLibrary() {
         }
         
         libraryVoiceRecognition = new SR();
-        libraryVoiceRecognition.lang = "vi-VN";
+        libraryVoiceRecognition.lang = "en-US"; // Mặc định tiếng Anh, sẽ tự động nhận diện
         libraryVoiceRecognition.continuous = false;
         libraryVoiceRecognition.interimResults = true;
         
@@ -1123,9 +1125,11 @@ function voiceSearchLibrary() {
             document.getElementById('voiceSearchBtn').classList.add('listening');
             document.getElementById('voiceSearchBtn').innerHTML = '<span class="btn-icon">⏹</span>';
             log("🎤 Listening for search query...", 'system');
-            var question = "Bạn muốn tìm kiếm thông tin gì?";
-            log("🤖 " + question, 'assistant');
-            speak(question);
+            
+            // Gửi lời chào bằng cả tiếng Anh và tiếng Việt
+            var greeting = "What would you like to search for? / Bạn muốn tìm kiếm điều gì?";
+            log("🤖 " + greeting, 'assistant');
+            speak(greeting);
         };
         
         libraryVoiceRecognition.onend = function() {
@@ -1142,17 +1146,52 @@ function voiceSearchLibrary() {
         libraryVoiceRecognition.onresult = function(e) {
             var transcript = '';
             var isVietnamese = false;
+            
             for (var i = e.resultIndex; i < e.results.length; i++) {
                 var text = e.results[i][0].transcript;
                 transcript += text;
+                
+                // Kiểm tra ngôn ngữ
                 if (/[áàảãạăắằẳẵặâấầẩẫậđéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵ]/i.test(text)) {
                     isVietnamese = true;
                 }
+                
                 if (e.results[i].isFinal) {
+                    // Đặt text vào ô tìm kiếm
                     document.getElementById('searchQuery').value = transcript;
+                    
+                    // Thực hiện tìm kiếm
                     applyFilters();
+                    
+                    // Hiển thị kết quả tìm kiếm
                     var lang = isVietnamese ? '🔍 Tìm kiếm: "' : '🔍 Search: "';
                     log(lang + transcript + '"', 'user');
+                    
+                    // Tự động mở document đầu tiên nếu tìm thấy
+                    var results = performSmartSearch(transcript);
+                    if (results.length > 0) {
+                        var bestMatch = results[0];
+                        if (bestMatch && bestMatch.link) {
+                            // Mở link trong tab mới
+                            if (bestMatch.link.indexOf('http://') === 0 || bestMatch.link.indexOf('https://') === 0) {
+                                window.open(bestMatch.link, '_blank');
+                                log('📂 Opening: ' + bestMatch.name, 'system');
+                                var successMsg = isVietnamese ? 
+                                    '✅ Đã mở tài liệu: ' + bestMatch.name : 
+                                    '✅ Opened document: ' + bestMatch.name;
+                                log(successMsg, 'assistant');
+                                speak(successMsg);
+                            }
+                        }
+                    } else {
+                        var notFound = isVietnamese ? 
+                            '❌ Không tìm thấy tài liệu nào phù hợp' : 
+                            '❌ No matching documents found';
+                        log(notFound, 'assistant');
+                        speak(notFound);
+                    }
+                    
+                    // Dừng voice sau khi xử lý
                     stopLibraryVoice();
                 }
             }
@@ -1180,6 +1219,10 @@ function stopLibraryVoice() {
         btn.innerHTML = '<span class="btn-icon">🎤</span>';
     }
 }
+
+
+
+
 
 // ==================== EVENT LISTENERS ====================
 document.addEventListener('DOMContentLoaded', function() {
