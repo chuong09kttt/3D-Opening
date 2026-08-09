@@ -595,7 +595,7 @@ function performSmartSearch(query) {
     return filtered.map(function(item) { return item.doc; });
 }
 
-// ==================== VOICE NLP PROCESSING ====================
+// ==================== VOICE NLP PROCESSING - FIXED ====================
 function processFullVoiceNLP(t) {
     if (!t || t.trim().length < 2) return;
     log("👤 " + t, 'user');
@@ -612,13 +612,20 @@ function processFullVoiceNLP(t) {
     function findVal(keywords) {
         for (var i = 0; i < keywords.length; i++) {
             var kw = keywords[i];
-            var regex = new RegExp('\\b' + kw + '\\b(?:\\s+is|\\s+of|\\s*[:=]|\\s+)?\\s*(-?\\d+(?:[.,]\\d+)?)', "i");
-            var match = str.match(regex);
-            if (match) return cleanNumberString(match[1]);
+            var patterns = [
+                new RegExp('\\b' + kw + '\\b(?:\\s+is|\\s+of|\\s*[:=]|\\s+)?\\s*(-?\\d+(?:[.,]\\d+)?)', "i"),
+                new RegExp('\\b' + kw + '\\s*(-?\\d+(?:[.,]\\d+)?)', "i"),
+                new RegExp('(-?\\d+(?:[.,]\\d+)?)\\s*' + kw, "i")
+            ];
+            for (var j = 0; j < patterns.length; j++) {
+                var match = str.match(patterns[j]);
+                if (match) return cleanNumberString(match[1] || match[2]);
+            }
         }
         return null;
     }
 
+    // Xử lý tìm kiếm trong Library
     if (str.match(/search\s+(?:for\s+)?(.+)/i)) {
         var searchQuery = str.replace(/search\s+(?:for\s+)?/i, '').trim();
         if (searchQuery && searchQuery.length > 1) {
@@ -641,18 +648,40 @@ function processFullVoiceNLP(t) {
         return;
     }
 
+    // Xử lý lưu file
     if (str.match(/save\s*(?:file|document)?/i) || str.match(/export\s*file/i)) { 
         autoSaveDialog(); 
         return; 
     }
 
-    var len = findVal(["length", "dài"]);
-    var wid = findVal(["width", "rộng"]);
-    var hei = findVal(["thickness", "height", "dày", "cao"]);
+    // PHÂN BIỆT RÕ CÁC THÔNG SỐ
+    var len = null, wid = null, hei = null;
+    
+    // Tìm Length - chỉ nhận khi có từ khóa "length" hoặc "dài"
+    if (str.match(/length\s+(\d+)/i) || str.match(/dài\s+(\d+)/i)) {
+        len = findVal(["length", "dài"]);
+    }
+    
+    // Tìm Width - chỉ nhận khi có từ khóa "width" hoặc "rộng"
+    if (str.match(/width\s+(\d+)/i) || str.match(/rộng\s+(\d+)/i)) {
+        wid = findVal(["width", "rộng"]);
+    }
+    
+    // Tìm Thickness/Height - chỉ nhận khi có từ khóa "thickness", "height", "dày" hoặc "cao"
+    if (str.match(/thickness\s+(\d+)/i) || str.match(/height\s+(\d+)/i) || str.match(/dày\s+(\d+)/i) || str.match(/cao\s+(\d+)/i)) {
+        hei = findVal(["thickness", "height", "dày", "cao"]);
+    }
+    
+    // Nếu không tìm thấy với từ khóa cụ thể, thử tìm theo thứ tự
+    if (len === null) len = findVal(["length", "dài"]);
+    if (wid === null) wid = findVal(["width", "rộng"]);
+    if (hei === null) hei = findVal(["thickness", "height", "dày", "cao"]);
+    
     if (len !== null) { document.getElementById("dx").value = len; updatedCount++; }
     if (wid !== null) { document.getElementById("dy").value = wid; updatedCount++; }
     if (hei !== null) { document.getElementById("dz").value = hei; updatedCount++; }
 
+    // Xử lý Position
     var posX = findVal(["position x", "pos x", "x position", "x"]);
     var posY = findVal(["position y", "pos y", "y position", "y"]);
     var posZ = findVal(["position z", "pos z", "z position", "z"]);
@@ -661,6 +690,7 @@ function processFullVoiceNLP(t) {
     if (posY !== null) { document.getElementById("py").value = posY; updatedCount++; }
     if (posZ !== null) { document.getElementById("pz").value = posZ; updatedCount++; }
 
+    // Xử lý Corner Radius
     var radAll = findVal(["corner radius", "radius"]);
     if (radAll !== null) { 
         document.getElementById("r1").value = radAll; 
@@ -670,16 +700,21 @@ function processFullVoiceNLP(t) {
         updatedCount++; 
     }
 
-    if (str.match(/orientation\s*x/i) || str.match(/axis\s*x/i)) { setOri('X'); updatedCount++; }
-    else if (str.match(/orientation\s*y/i) || str.match(/axis\s*y/i)) { setOri('Y'); updatedCount++; }
-    else if (str.match(/orientation\s*z/i) || str.match(/axis\s*z/i)) { setOri('Z'); updatedCount++; }
+    // Xử lý Orientation
+    if (str.match(/orientation\s*x/i) || str.match(/axis\s*x/i) || str.match(/trục\s*x/i)) { setOri('X'); updatedCount++; }
+    else if (str.match(/orientation\s*y/i) || str.match(/axis\s*y/i) || str.match(/trục\s*y/i)) { setOri('Y'); updatedCount++; }
+    else if (str.match(/orientation\s*z/i) || str.match(/axis\s*z/i) || str.match(/trục\s*z/i)) { setOri('Z'); updatedCount++; }
 
     if (updatedCount > 0) { 
         draw(); 
-        log("✅ Parameters updated!", 'assistant'); 
+        var msg = "✅ Đã cập nhật " + updatedCount + " thông số!";
+        log(msg, 'assistant');
+        speak(msg);
         autoSaveDialog(); 
     } else { 
-        log("⚠️ Could not recognize parameters", 'assistant'); 
+        var msg = "⚠️ Không nhận diện được thông số. Vui lòng nói rõ: Length, Width, Thickness";
+        log(msg, 'assistant');
+        speak(msg);
     }
 }
 
@@ -805,7 +840,7 @@ function initVoice() {
                 }
                 partialTranscript = ''; 
             } 
-        }, 2000);
+        }, 3000);
     };
     
     return r;
@@ -914,10 +949,24 @@ function voiceSearchLibrary() {
             var greeting = "Bạn muốn tìm kiếm điều gì?";
             log("🤖 " + greeting, 'assistant');
             speak(greeting);
+            
+            setTimeout(function() {
+                if (isLibraryVoiceListening) {
+                    var searchQuery = document.getElementById('searchQuery').value.trim();
+                    if (!searchQuery) {
+                        log("⏰ Hết thời gian chờ, vui lòng thử lại", 'system');
+                        stopLibraryVoice();
+                    }
+                }
+            }, 10000);
         };
         
         libraryVoiceRecognition.onend = function() {
             if (isLibraryVoiceListening) {
+                var searchQuery = document.getElementById('searchQuery').value.trim();
+                if (!searchQuery) {
+                    log("⏰ Không nhận được giọng nói, vui lòng thử lại", 'system');
+                }
                 document.getElementById('voiceSearchBtn').classList.remove('listening');
                 document.getElementById('voiceSearchBtn').innerHTML = '<span class="btn-icon">🎤</span>';
                 isLibraryVoiceListening = false;
@@ -928,7 +977,9 @@ function voiceSearchLibrary() {
             console.log('Library voice error:', e.error);
             if (e.error === 'not-allowed') {
                 log("❌ Microphone access denied for search", 'system');
-            } else if (e.error !== 'no-speech') {
+            } else if (e.error === 'no-speech') {
+                log("⏰ Không nghe thấy giọng nói, vui lòng thử lại", 'system');
+            } else {
                 log("⚠️ Voice search error: " + e.error, 'system');
             }
             stopLibraryVoice();
@@ -949,7 +1000,16 @@ function voiceSearchLibrary() {
                 if (e.results[i].isFinal) {
                     handleLibraryVoiceResult(transcript, isVietnamese);
                     stopLibraryVoice();
+                    var successMsg = isVietnamese ? 
+                        '✅ Đã tìm thấy kết quả cho: "' + transcript + '"' : 
+                        '✅ Found results for: "' + transcript + '"';
+                    log(successMsg, 'assistant');
+                    speak(successMsg);
                 }
+            }
+            
+            if (transcript) {
+                document.getElementById('searchQuery').value = transcript;
             }
         };
     }
@@ -957,6 +1017,7 @@ function voiceSearchLibrary() {
     isLibraryVoiceListening = true;
     try {
         libraryVoiceRecognition.start();
+        log("🎤 Đang lắng nghe... (10 giây)", 'system');
     } catch(e) {
         console.log('Library voice start error:', e);
         if (e.name === 'InvalidStateError') {
@@ -966,10 +1027,14 @@ function voiceSearchLibrary() {
                     try {
                         if (libraryVoiceRecognition && isLibraryVoiceListening) {
                             libraryVoiceRecognition.start();
+                            log("🎤 Đang lắng nghe... (10 giây)", 'system');
                         }
                     } catch(e2) {
                         console.log('Retry library voice error:', e2);
                         isLibraryVoiceListening = false;
+                        document.getElementById('voiceSearchBtn').classList.remove('listening');
+                        document.getElementById('voiceSearchBtn').innerHTML = '<span class="btn-icon">🎤</span>';
+                        log("⚠️ Không thể khởi động voice search", 'system');
                     }
                 }, 500);
             } catch(e2) {
@@ -980,7 +1045,7 @@ function voiceSearchLibrary() {
             isLibraryVoiceListening = false;
             document.getElementById('voiceSearchBtn').classList.remove('listening');
             document.getElementById('voiceSearchBtn').innerHTML = '<span class="btn-icon">🎤</span>';
-            log("⚠️ Could not start voice search", 'system');
+            log("⚠️ Không thể khởi động voice search", 'system');
         }
     }
 }
@@ -1008,8 +1073,8 @@ function handleLibraryVoiceResult(transcript, isVietnamese) {
         }
     } else {
         var notFound = isVietnamese ? 
-            '❌ Không tìm thấy tài liệu nào phù hợp' : 
-            '❌ No matching documents found';
+            '❌ Không tìm thấy tài liệu nào phù hợp với: "' + transcript + '"' : 
+            '❌ No matching documents found for: "' + transcript + '"';
         log(notFound, 'assistant');
         speak(notFound);
     }
