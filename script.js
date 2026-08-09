@@ -10,8 +10,8 @@ let isSpeaking = false;
 let hasAutoTriggeredSave = false;
 
 // ==================== CONFIGURATION ====================
-const GOOGLE_SHEETS_DATA_URL = 'https://script.google.com/macros/s/AKfycbxjPFKSL9rAAblIPzTQZzAO5JgIPZR8j93isgvBN1UzVYRvqFWi6ujwxzHESUh5AXPk/exec';
-const TOOL_DOWNLOAD_URL = 'https://drive.google.com/file/d/14NNDzXSCG63m1yQZb51tZhrZfd5k8KPf/view';
+const GOOGLE_SHEETS_DATA_URL = 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec';
+const TOOL_DOWNLOAD_URL = 'https://drive.google.com/drive/folders/YOUR_FOLDER_ID';
 
 let isSyncing = false;
 let library = [];
@@ -24,6 +24,8 @@ let syncTimeout = null;
 // Khai báo biến cho Library Voice
 let libraryVoiceRecognition = null;
 let isLibraryVoiceListening = false;
+let recognitionRestartAttempts = 0;
+const MAX_RESTART_ATTEMPTS = 3;
 
 // ==================== TOOL DOWNLOAD ====================
 function open3DOpeningTool() {
@@ -681,24 +683,28 @@ function processFullVoiceNLP(t) {
     }
 }
 
-// ==================== VOICE RECOGNITION ====================
+// ==================== VOICE RECOGNITION - FIXED ====================
 function initVoice() {
     var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) { 
         log("❌ Browser does not support Voice", 'system'); 
         return null; 
     }
+    
     var r = new SR();
     r.lang = "vi-VN"; 
     r.continuous = true; 
     r.interimResults = true;
+    r.maxAlternatives = 1;
     
     r.onstart = function() {
         isListening = true;
+        recognitionRestartAttempts = 0;
         document.getElementById('voiceBtn').classList.add('listening');
         document.getElementById('chatStatus').textContent = '● Listening...';
         document.getElementById('chatStatus').classList.add('waiting');
         log("🎤 Listening...", 'system');
+        
         var greeting = "Xin chào, bạn hãy đọc các thông số kích thước nhé";
         log("🤖 " + greeting, 'assistant');
         speak(greeting);
@@ -707,26 +713,59 @@ function initVoice() {
     };
     
     r.onend = function() {
-        if (isListening) { 
-            try { r.start(); } catch(e) {} 
-        } else { 
+        if (!isListening) {
             document.getElementById('voiceBtn').classList.remove('listening'); 
             document.getElementById('chatStatus').textContent = '● Ready'; 
-            document.getElementById('chatStatus').classList.remove('waiting'); 
+            document.getElementById('chatStatus').classList.remove('waiting');
+            return;
+        }
+        
+        if (isListening && recognitionRestartAttempts < MAX_RESTART_ATTEMPTS) {
+            recognitionRestartAttempts++;
+            try {
+                setTimeout(function() {
+                    if (isListening && recognition) {
+                        try {
+                            recognition.start();
+                        } catch(e) {
+                            console.log('Restart attempt failed:', e);
+                            if (recognitionRestartAttempts < MAX_RESTART_ATTEMPTS) {
+                                setTimeout(arguments.callee, 500);
+                            }
+                        }
+                    }
+                }, 300);
+            } catch(e) {
+                console.log('Restart error:', e);
+            }
+        } else if (recognitionRestartAttempts >= MAX_RESTART_ATTEMPTS) {
+            log("⚠️ Voice recognition stopped after multiple attempts", 'system');
+            stopVoice();
         }
     };
     
     r.onerror = function(e) {
+        console.log('Speech recognition error:', e.error);
+        
         if (e.error === 'not-allowed') { 
             log("❌ Microphone access denied", 'system'); 
             stopVoice(); 
-        } else if (e.error !== 'no-speech') {
-            log("⚠️ Error: " + e.error, 'system');
-        }
-        if (isListening && e.error !== 'not-allowed') { 
-            try { 
-                setTimeout(function() { r.start(); }, 300); 
-            } catch(e) {} 
+        } else if (e.error === 'no-speech') {
+            return;
+        } else if (e.error === 'audio-capture') {
+            log("⚠️ No microphone found", 'system');
+            stopVoice();
+        } else if (e.error === 'network') {
+            log("⚠️ Network error, retrying...", 'system');
+            if (isListening) {
+                setTimeout(function() {
+                    try {
+                        if (recognition) recognition.start();
+                    } catch(e) {}
+                }, 1000);
+            }
+        } else {
+            log("⚠️ Voice error: " + e.error, 'system');
         }
     };
     
@@ -735,6 +774,7 @@ function initVoice() {
             clearTimeout(silenceTimer); 
             silenceTimer = null; 
         }
+        
         var finalText = '', interimText = '';
         for (var i = e.resultIndex; i < e.results.length; i++) {
             var transcript = e.results[i][0].transcript.trim();
@@ -744,21 +784,30 @@ function initVoice() {
                 interimText += transcript + ' ';
             }
         }
+        
         if (finalText) { 
             partialTranscript += finalText; 
-            processFullVoiceNLP(partialTranscript.trim()); 
+            var text = partialTranscript.trim();
+            if (text) {
+                processFullVoiceNLP(text); 
+            }
             partialTranscript = ''; 
         } else if (interimText) { 
             document.getElementById('chatStatus').textContent = '● Speaking...'; 
             partialTranscript = interimText.trim(); 
         }
+        
         silenceTimer = setTimeout(function() { 
             if (isListening && partialTranscript) { 
-                processFullVoiceNLP(partialTranscript.trim()); 
+                var text = partialTranscript.trim();
+                if (text) {
+                    processFullVoiceNLP(text); 
+                }
                 partialTranscript = ''; 
             } 
         }, 2000);
     };
+    
     return r;
 }
 
@@ -767,34 +816,219 @@ function voice() {
         stopVoice(); 
         return; 
     }
+    
     if (!recognition) { 
         recognition = initVoice(); 
-        if (!recognition) return; 
+        if (!recognition) {
+            alert("❌ Your browser does not support voice recognition. Please use Chrome or Edge.");
+            return;
+        }
     }
-    try { 
-        recognition.start(); 
-    } catch(e) { 
-        try { 
-            recognition.stop(); 
-            setTimeout(function() { recognition.start(); }, 300); 
-        } catch(e2) {} 
+    
+    recognitionRestartAttempts = 0;
+    isListening = true;
+    
+    try {
+        recognition.start();
+    } catch(e) {
+        console.log('Start error:', e);
+        if (e.name === 'InvalidStateError') {
+            try {
+                recognition.stop();
+                setTimeout(function() {
+                    try {
+                        if (recognition && isListening) {
+                            recognition.start();
+                        }
+                    } catch(e2) {
+                        console.log('Retry start error:', e2);
+                        isListening = false;
+                        document.getElementById('voiceBtn').classList.remove('listening');
+                        document.getElementById('chatStatus').textContent = '● Ready';
+                        document.getElementById('chatStatus').classList.remove('waiting');
+                        log("⚠️ Could not start voice recognition", 'system');
+                    }
+                }, 500);
+            } catch(e2) {
+                console.log('Stop error:', e2);
+                isListening = false;
+            }
+        } else {
+            isListening = false;
+            log("⚠️ Could not start voice recognition: " + e.message, 'system');
+        }
     }
 }
 
 function stopVoice() {
     isListening = false;
+    recognitionRestartAttempts = 0;
+    
     if (silenceTimer) { 
         clearTimeout(silenceTimer); 
         silenceTimer = null; 
     }
+    
     if (recognition) { 
-        try { recognition.stop(); } catch(e) {} 
+        try { 
+            recognition.stop(); 
+        } catch(e) {
+            console.log('Stop error:', e);
+        }
     }
+    
     document.getElementById('voiceBtn').classList.remove('listening');
     document.getElementById('chatStatus').textContent = '● Ready';
     document.getElementById('chatStatus').classList.remove('waiting');
     partialTranscript = '';
     log("🔇 Stopped listening", 'system');
+}
+
+// ==================== LIBRARY VOICE SEARCH - FIXED ====================
+function voiceSearchLibrary() {
+    if (isLibraryVoiceListening) {
+        stopLibraryVoice();
+        return;
+    }
+    
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) {
+        log("❌ Browser doesn't support Voice", 'system');
+        alert("❌ Browser doesn't support Voice");
+        return;
+    }
+    
+    if (!libraryVoiceRecognition) {
+        libraryVoiceRecognition = new SR();
+        libraryVoiceRecognition.lang = "vi-VN";
+        libraryVoiceRecognition.continuous = false;
+        libraryVoiceRecognition.interimResults = true;
+        libraryVoiceRecognition.maxAlternatives = 1;
+        
+        libraryVoiceRecognition.onstart = function() {
+            isLibraryVoiceListening = true;
+            document.getElementById('voiceSearchBtn').classList.add('listening');
+            document.getElementById('voiceSearchBtn').innerHTML = '<span class="btn-icon">⏹</span>';
+            log("🎤 Listening for search query...", 'system');
+            
+            var greeting = "Bạn muốn tìm kiếm điều gì?";
+            log("🤖 " + greeting, 'assistant');
+            speak(greeting);
+        };
+        
+        libraryVoiceRecognition.onend = function() {
+            if (isLibraryVoiceListening) {
+                document.getElementById('voiceSearchBtn').classList.remove('listening');
+                document.getElementById('voiceSearchBtn').innerHTML = '<span class="btn-icon">🎤</span>';
+                isLibraryVoiceListening = false;
+            }
+        };
+        
+        libraryVoiceRecognition.onerror = function(e) {
+            console.log('Library voice error:', e.error);
+            if (e.error === 'not-allowed') {
+                log("❌ Microphone access denied for search", 'system');
+            } else if (e.error !== 'no-speech') {
+                log("⚠️ Voice search error: " + e.error, 'system');
+            }
+            stopLibraryVoice();
+        };
+        
+        libraryVoiceRecognition.onresult = function(e) {
+            var transcript = '';
+            var isVietnamese = false;
+            
+            for (var i = e.resultIndex; i < e.results.length; i++) {
+                var text = e.results[i][0].transcript;
+                transcript += text;
+                
+                if (/[áàảãạăắằẳẵặâấầẩẫậđéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵ]/i.test(text)) {
+                    isVietnamese = true;
+                }
+                
+                if (e.results[i].isFinal) {
+                    handleLibraryVoiceResult(transcript, isVietnamese);
+                    stopLibraryVoice();
+                }
+            }
+        };
+    }
+    
+    isLibraryVoiceListening = true;
+    try {
+        libraryVoiceRecognition.start();
+    } catch(e) {
+        console.log('Library voice start error:', e);
+        if (e.name === 'InvalidStateError') {
+            try {
+                libraryVoiceRecognition.stop();
+                setTimeout(function() {
+                    try {
+                        if (libraryVoiceRecognition && isLibraryVoiceListening) {
+                            libraryVoiceRecognition.start();
+                        }
+                    } catch(e2) {
+                        console.log('Retry library voice error:', e2);
+                        isLibraryVoiceListening = false;
+                    }
+                }, 500);
+            } catch(e2) {
+                console.log('Stop library voice error:', e2);
+                isLibraryVoiceListening = false;
+            }
+        } else {
+            isLibraryVoiceListening = false;
+            document.getElementById('voiceSearchBtn').classList.remove('listening');
+            document.getElementById('voiceSearchBtn').innerHTML = '<span class="btn-icon">🎤</span>';
+            log("⚠️ Could not start voice search", 'system');
+        }
+    }
+}
+
+function handleLibraryVoiceResult(transcript, isVietnamese) {
+    document.getElementById('searchQuery').value = transcript;
+    applyFilters();
+    
+    var lang = isVietnamese ? '🔍 Tìm kiếm: "' : '🔍 Search: "';
+    log(lang + transcript + '"', 'user');
+    
+    var results = performSmartSearch(transcript);
+    if (results.length > 0) {
+        var bestMatch = results[0];
+        if (bestMatch && bestMatch.link) {
+            if (bestMatch.link.indexOf('http://') === 0 || bestMatch.link.indexOf('https://') === 0) {
+                window.open(bestMatch.link, '_blank');
+                log('📂 Opening: ' + bestMatch.name, 'system');
+                var successMsg = isVietnamese ? 
+                    '✅ Đã mở tài liệu: ' + bestMatch.name : 
+                    '✅ Opened document: ' + bestMatch.name;
+                log(successMsg, 'assistant');
+                speak(successMsg);
+            }
+        }
+    } else {
+        var notFound = isVietnamese ? 
+            '❌ Không tìm thấy tài liệu nào phù hợp' : 
+            '❌ No matching documents found';
+        log(notFound, 'assistant');
+        speak(notFound);
+    }
+}
+
+function stopLibraryVoice() {
+    isLibraryVoiceListening = false;
+    if (libraryVoiceRecognition) {
+        try { 
+            libraryVoiceRecognition.stop(); 
+        } catch(e) {
+            console.log('Stop library voice error:', e);
+        }
+    }
+    var btn = document.getElementById('voiceSearchBtn');
+    if (btn) {
+        btn.classList.remove('listening');
+        btn.innerHTML = '<span class="btn-icon">🎤</span>';
+    }
 }
 
 // ==================== 3D & EXPORT FUNCTIONS ====================
@@ -1142,117 +1376,6 @@ function closeHelp() {
         modal.classList.remove('active'); 
         document.body.style.overflow = ''; 
     } 
-}
-
-// ==================== LIBRARY VOICE SEARCH ====================
-function voiceSearchLibrary() {
-    if (isLibraryVoiceListening) {
-        stopLibraryVoice();
-        return;
-    }
-    
-    if (!libraryVoiceRecognition) {
-        var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (!SR) {
-            log("❌ Browser doesn't support Voice", 'system');
-            alert("❌ Browser doesn't support Voice");
-            return;
-        }
-        
-        libraryVoiceRecognition = new SR();
-        libraryVoiceRecognition.lang = "en-US";
-        libraryVoiceRecognition.continuous = false;
-        libraryVoiceRecognition.interimResults = true;
-        
-        libraryVoiceRecognition.onstart = function() {
-            isLibraryVoiceListening = true;
-            document.getElementById('voiceSearchBtn').classList.add('listening');
-            document.getElementById('voiceSearchBtn').innerHTML = '<span class="btn-icon">⏹</span>';
-            log("🎤 Listening for search query...", 'system');
-            
-            var greeting = "What would you like to search for? / Bạn muốn tìm kiếm điều gì?";
-            log("🤖 " + greeting, 'assistant');
-            speak(greeting);
-        };
-        
-        libraryVoiceRecognition.onend = function() {
-            stopLibraryVoice();
-        };
-        
-        libraryVoiceRecognition.onerror = function(e) {
-            if (e.error !== 'no-speech') {
-                log("⚠️ Error: " + e.error, 'system');
-            }
-            stopLibraryVoice();
-        };
-        
-        libraryVoiceRecognition.onresult = function(e) {
-            var transcript = '';
-            var isVietnamese = false;
-            
-            for (var i = e.resultIndex; i < e.results.length; i++) {
-                var text = e.results[i][0].transcript;
-                transcript += text;
-                
-                if (/[áàảãạăắằẳẵặâấầẩẫậđéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵ]/i.test(text)) {
-                    isVietnamese = true;
-                }
-                
-                if (e.results[i].isFinal) {
-                    document.getElementById('searchQuery').value = transcript;
-                    applyFilters();
-                    
-                    var lang = isVietnamese ? '🔍 Tìm kiếm: "' : '🔍 Search: "';
-                    log(lang + transcript + '"', 'user');
-                    
-                    var results = performSmartSearch(transcript);
-                    if (results.length > 0) {
-                        var bestMatch = results[0];
-                        if (bestMatch && bestMatch.link) {
-                            if (bestMatch.link.indexOf('http://') === 0 || bestMatch.link.indexOf('https://') === 0) {
-                                window.open(bestMatch.link, '_blank');
-                                log('📂 Opening: ' + bestMatch.name, 'system');
-                                var successMsg = isVietnamese ? 
-                                    '✅ Đã mở tài liệu: ' + bestMatch.name : 
-                                    '✅ Opened document: ' + bestMatch.name;
-                                log(successMsg, 'assistant');
-                                speak(successMsg);
-                            }
-                        }
-                    } else {
-                        var notFound = isVietnamese ? 
-                            '❌ Không tìm thấy tài liệu nào phù hợp' : 
-                            '❌ No matching documents found';
-                        log(notFound, 'assistant');
-                        speak(notFound);
-                    }
-                    
-                    stopLibraryVoice();
-                }
-            }
-        };
-    }
-    
-    try {
-        libraryVoiceRecognition.start();
-    } catch(e) {
-        try { 
-            libraryVoiceRecognition.stop(); 
-            setTimeout(function() { libraryVoiceRecognition.start(); }, 300); 
-        } catch(e2) {}
-    }
-}
-
-function stopLibraryVoice() {
-    isLibraryVoiceListening = false;
-    if (libraryVoiceRecognition) {
-        try { libraryVoiceRecognition.stop(); } catch(e) {}
-    }
-    var btn = document.getElementById('voiceSearchBtn');
-    if (btn) {
-        btn.classList.remove('listening');
-        btn.innerHTML = '<span class="btn-icon">🎤</span>';
-    }
 }
 
 // ==================== EVENT LISTENERS ====================
