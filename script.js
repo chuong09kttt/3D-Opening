@@ -230,6 +230,7 @@ function applyFilters() {
     renderLibrary(filtered);
 }
 
+
 // ==================== ADD DOCUMENT ====================
 function addDocumentToGoogleSheets(doc) {
     var formData = new URLSearchParams();
@@ -237,8 +238,8 @@ function addDocumentToGoogleSheets(doc) {
     formData.append('name', doc.name);
     formData.append('link', doc.link);
     formData.append('tags', doc.tags ? doc.tags.join(', ') : '');
-    formData.append('category', doc.category || '');
-    formData.append('department', doc.department || '');
+    formData.append('category', doc.category || 'others');
+    formData.append('department', doc.department || 'others');
 
     return fetch(GOOGLE_SHEETS_DATA_URL, {
         method: 'POST',
@@ -259,12 +260,18 @@ function addDocument() {
     var nameInput = document.getElementById('newDocName');
     var linkInput = document.getElementById('newDocLink');
     var tagsInput = document.getElementById('newDocTags');
+    var categorySelect = document.getElementById('newDocCategory');
+    var departmentSelect = document.getElementById('newDocDepartment');
     
-    if (!nameInput || !linkInput || !tagsInput) return alert('⚠️ Error: Input fields not found');
+    if (!nameInput || !linkInput || !tagsInput || !categorySelect || !departmentSelect) {
+        return alert('⚠️ Error: Input fields not found');
+    }
     
     var name = nameInput.value.trim();
     var link = linkInput.value.trim();
     var tags = tagsInput.value.trim().split(',').map(function(t) { return t.trim(); }).filter(function(t) { return t; });
+    var category = categorySelect.value;
+    var department = departmentSelect.value;
     
     if (!name) return alert('⚠️ Please enter document name');
     if (!link) return alert('⚠️ Please enter Drive link or description');
@@ -272,7 +279,13 @@ function addDocument() {
     var exists = library.some(function(doc) { return doc.name.toLowerCase() === name.toLowerCase(); });
     if (exists) return alert('⚠️ Document "' + name + '" already exists in library');
     
-    var newDoc = { name: name, link: link, tags: tags, category: 'others', department: 'others' };
+    var newDoc = { 
+        name: name, 
+        link: link, 
+        tags: tags, 
+        category: category, 
+        department: department 
+    };
     
     addDocumentToGoogleSheets(newDoc).then(function() {
         library.push(newDoc);
@@ -283,7 +296,7 @@ function addDocument() {
         linkInput.value = '';
         tagsInput.value = '';
         
-        log('📤 Document "' + name + '" submitted', 'system');
+        log('📤 Document "' + name + '" submitted to ' + category + ' / ' + department, 'system');
         updateSyncStatus('success', 'Sent "' + name + '". Will auto-refresh.');
         
         setTimeout(function() {
