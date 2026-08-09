@@ -440,7 +440,7 @@
                         <h4 style="color: rgba(255,255,255,0.4); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">🛠️ Công cụ</h4>
                         <div style="display: flex; flex-direction: column; gap: 3px;">
                             <div class="category-item" onclick="filterByTool('3d')">
-                                <span>🧊</span> 3D Opening Tool <span class="cat-count">5</span>
+                                <span>🧊</span> 3D Opening Tool <span class="cat-count" id="countTool3D">5</span>
                             </div>
                         </div>
                     </div>
@@ -459,12 +459,30 @@
                         <button class="btn btn-primary" onclick="toggleAddForm()" style="flex: none; padding: 0 16px; height: 36px; font-size: 11px;">➕ Thêm</button>
                     </div>
 
-                    <!-- Add Document Form (hidden by default) -->
+                    <!-- Add Document Form (with Category & Department) -->
                     <div id="addForm" style="display: none; background: rgba(255,255,255,0.03); border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; border: 1px solid rgba(255,255,255,0.06);">
-                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;">
                             <input id="newDocName" type="text" placeholder="Tên tài liệu..." style="flex: 1; min-width: 120px; height: 34px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; color: #fff; font-size: 12px; padding: 0 12px; outline: none; font-family: 'Inter', sans-serif;">
                             <input id="newDocLink" type="text" placeholder="Drive link..." style="flex: 2; min-width: 150px; height: 34px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; color: #fff; font-size: 12px; padding: 0 12px; outline: none; font-family: 'Inter', sans-serif;">
                             <input id="newDocTags" type="text" placeholder="Tags (phân cách bằng dấu phẩy)..." style="flex: 1; min-width: 100px; height: 34px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; color: #fff; font-size: 12px; padding: 0 12px; outline: none; font-family: 'Inter', sans-serif;">
+                        </div>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <!-- Category Dropdown -->
+                            <select id="newDocCategory" style="flex: 1; min-width: 120px; height: 34px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; color: #fff; font-size: 12px; padding: 0 12px; outline: none; font-family: 'Inter', sans-serif;">
+                                <option value="standards">📋 Tiêu chuẩn</option>
+                                <option value="procedures">📝 Quy trình</option>
+                                <option value="methods">🔧 Phương pháp</option>
+                                <option value="experience">💡 Kinh nghiệm</option>
+                                <option value="others" selected>📎 Khác</option>
+                            </select>
+                            <!-- Department Dropdown -->
+                            <select id="newDocDepartment" style="flex: 1; min-width: 120px; height: 34px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; color: #fff; font-size: 12px; padding: 0 12px; outline: none; font-family: 'Inter', sans-serif;">
+                                <option value="hull">🚢 Vỏ</option>
+                                <option value="piping">🔧 Ống</option>
+                                <option value="electrical">⚡ Điện</option>
+                                <option value="outfitting">🛠️ Kết cấu phụ</option>
+                                <option value="others" selected>📎 Khác</option>
+                            </select>
                             <button class="btn btn-primary" onclick="addDocument()" style="flex: none; padding: 0 16px; height: 34px; font-size: 11px;">➕ Add</button>
                             <button class="btn btn-reset" onclick="toggleAddForm()" style="flex: none; padding: 0 12px; height: 34px; font-size: 11px;">✕</button>
                         </div>
