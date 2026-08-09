@@ -699,3 +699,30 @@ select option {
     color: #fff;
     padding: 8px;
 }
+
+/* Loading state for add button */
+.btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+/* Refresh animation */
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+#syncStatus.syncing #syncIcon {
+    animation: spin 1s linear infinite;
+}
+
+/* Document item highlight when new */
+.doc-item.highlight {
+    animation: highlightFade 2s ease;
+}
+
+@keyframes highlightFade {
+    0% { background: rgba(108, 92, 231, 0.3); border-color: #6c5ce7; }
+    100% { background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.04); }
+}
