@@ -126,15 +126,14 @@ function updateSyncStatus(status, text) {
 }
 
 function updateCategoryCounts() {
-    var counts = { all: library.length, standards: 0, procedures: 0, methods: 0, experience: 0 };
+    var counts = { all: library.length, standards: 0, methods: 0, experience: 0 };
     var deptCounts = { hull: 0, piping: 0, electrical: 0, outfitting: 0, others: 0 };
     
     library.forEach(function(doc) {
         var cat = doc.category || 'others';
-        if (cat === 'standards' || cat === 'tiêu chuẩn') counts.standards++;
-        else if (cat === 'procedures' || cat === 'quy trình') counts.procedures++;
-        else if (cat === 'methods' || cat === 'phương pháp') counts.methods++;
-        else if (cat === 'experience' || cat === 'kinh nghiệm') counts.experience++;
+        if (cat === 'standards' || cat === 'tiêu chuẩn' || cat === 'Rules & Standards') counts.standards++;
+        else if (cat === 'methods' || cat === 'phương pháp' || cat === 'Methods') counts.methods++;
+        else if (cat === 'experience' || cat === 'kinh nghiệm' || cat === 'Experience') counts.experience++;
         
         var dept = doc.department || 'others';
         if (dept === 'hull' || dept === 'vỏ') deptCounts.hull++;
@@ -146,7 +145,6 @@ function updateCategoryCounts() {
     
     document.getElementById('countAll').textContent = counts.all;
     document.getElementById('countStandards').textContent = counts.standards;
-    document.getElementById('countProcedures').textContent = counts.procedures;
     document.getElementById('countMethods').textContent = counts.methods;
     document.getElementById('countExperience').textContent = counts.experience;
     document.getElementById('countHull').textContent = deptCounts.hull;
