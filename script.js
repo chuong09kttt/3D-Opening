@@ -18,10 +18,64 @@ let deleteTargetIndex = null;
 let currentFilter = 'all';
 let currentDeptFilter = null;
 let isAddFormVisible = false;
+let toolAddress = localStorage.getItem('toolAddress') || '';
 
-// Khai báo biến cho Library Voice
-let libraryVoiceRecognition = null;
-let isLibraryVoiceListening = false;
+// ==================== TOOL ADDRESS FUNCTIONS ====================
+function saveToolAddress() {
+    var input = document.getElementById('toolAddress');
+    if (input) {
+        toolAddress = input.value.trim();
+        localStorage.setItem('toolAddress', toolAddress);
+        updateToolAddressDisplay();
+        log('💾 Đã lưu địa chỉ công cụ: ' + toolAddress, 'system');
+        alert('✅ Đã lưu địa chỉ công cụ thành công!');
+    }
+}
+
+function updateToolAddressDisplay() {
+    var display = document.getElementById('toolAddressDisplay');
+    var input = document.getElementById('toolAddress');
+    if (display && input) {
+        if (toolAddress) {
+            display.style.display = 'block';
+            display.textContent = '📌 ' + toolAddress;
+            input.value = toolAddress;
+        } else {
+            display.style.display = 'none';
+        }
+    }
+}
+
+function filterByTool(tool) {
+    // Đếm số lượng document có tag "3d" hoặc "opening"
+    var count = library.filter(function(doc) {
+        var tags = doc.tags || [];
+        return tags.some(function(t) { 
+            return t.toLowerCase().includes('3d') || 
+                   t.toLowerCase().includes('opening') ||
+                   t.toLowerCase().includes('tool');
+        });
+    }).length;
+    document.getElementById('countTool3D').textContent = count;
+    log('🔧 3D Opening Tool: ' + count + ' documents available', 'system');
+    
+    // Hiển thị địa chỉ công cụ nếu có
+    if (toolAddress) {
+        log('📌 Địa chỉ công cụ: ' + toolAddress, 'system');
+    }
+    
+    // Filter documents với tag liên quan
+    var filtered = library.filter(function(doc) {
+        var tags = doc.tags || [];
+        var name = doc.name || '';
+        return tags.some(function(t) { 
+            return t.toLowerCase().includes('3d') || 
+                   t.toLowerCase().includes('opening') ||
+                   t.toLowerCase().includes('tool');
+        }) || name.toLowerCase().includes('opening');
+    });
+    renderLibrary(filtered);
+}
 
 // ==================== SYNC FUNCTIONS ====================
 function syncWithGoogleSheets() {
@@ -142,6 +196,17 @@ function updateCategoryCounts() {
     document.getElementById('countElectrical').textContent = deptCounts.electrical;
     document.getElementById('countOutfitting').textContent = deptCounts.outfitting;
     document.getElementById('countOthers').textContent = deptCounts.others;
+    
+    // Cập nhật số lượng cho 3D Opening Tool
+    var toolCount = library.filter(function(doc) {
+        var tags = doc.tags || [];
+        return tags.some(function(t) { 
+            return t.toLowerCase().includes('3d') || 
+                   t.toLowerCase().includes('opening') ||
+                   t.toLowerCase().includes('tool');
+        });
+    }).length;
+    document.getElementById('countTool3D').textContent = toolCount;
 }
 
 // ==================== CATEGORY FILTERS ====================
@@ -152,6 +217,8 @@ function filterByCategory(category) {
     for (var i = 0; i < catEls.length; i++) catEls[i].classList.remove('active');
     var deptEls = document.querySelectorAll('.category-item[data-dept]');
     for (var j = 0; j < deptEls.length; j++) deptEls[j].classList.remove('active');
+    var toolEls = document.querySelectorAll('.category-item[data-tool]');
+    for (var k = 0; k < toolEls.length; k++) toolEls[k].classList.remove('active');
     var el = document.querySelector('.category-item[data-category="' + category + '"]');
     if (el) el.classList.add('active');
     applyFilters();
@@ -163,13 +230,11 @@ function filterByDepartment(department) {
     for (var i = 0; i < deptEls.length; i++) deptEls[i].classList.remove('active');
     var catEls = document.querySelectorAll('.category-item[data-category]');
     for (var j = 0; j < catEls.length; j++) catEls[j].classList.remove('active');
+    var toolEls = document.querySelectorAll('.category-item[data-tool]');
+    for (var k = 0; k < toolEls.length; k++) toolEls[k].classList.remove('active');
     var el = document.querySelector('.category-item[data-dept="' + department + '"]');
     if (el) el.classList.add('active');
     applyFilters();
-}
-
-function filterByTool(tool) {
-    log('🔧 3D Opening Tool: 5 documents available', 'system');
 }
 
 function applyFilters() {
@@ -229,7 +294,6 @@ function applyFilters() {
     
     renderLibrary(filtered);
 }
-
 
 // ==================== ADD DOCUMENT ====================
 function addDocumentToGoogleSheets(doc) {
@@ -479,6 +543,7 @@ function openLibrary() {
         document.getElementById('searchResults').style.display = 'none';
         renderLibrary();
         updateCategoryCounts();
+        updateToolAddressDisplay();
         log("📚 Library opened", 'system');
         syncWithGoogleSheets();
     }
@@ -627,7 +692,6 @@ function initVoice() {
         document.getElementById('chatStatus').textContent = '● Listening...';
         document.getElementById('chatStatus').classList.add('waiting');
         log("🎤 Listening...", 'system');
-        // Gửi lời chào khi bắt đầu voice
         var greeting = "Xin chào, bạn hãy đọc các thông số kích thước nhé";
         log("🤖 " + greeting, 'assistant');
         speak(greeting);
@@ -826,7 +890,6 @@ function generateAndDownloadFile(fileName) {
     a.click(); 
     document.body.removeChild(a);
     
-    // Thông báo xuất file thành công
     var successMsg = "✅ Đã xuất file " + fileName + ".mac thành công!";
     log(successMsg, 'system');
     speak("Đã xuất file thành công");
@@ -871,9 +934,9 @@ function draw() {
     var l = L * scale; 
     var w = W * scale; 
     var t = T * scale;
-    // Dịch trục tọa độ lên cao để không bị khuất
-    var cx = c.width / 2 - 20 + (posX * scale); 
-    var cy = c.height / 2 - 10 - (posZ * scale);
+    // Dịch canvas sang phải và xuống dưới để tránh đè lên trục
+    var cx = c.width / 2 + 40 + (posX * scale); 
+    var cy = c.height / 2 + 20 - (posZ * scale);
     var vX, vY, vZ;
     if (ORI === "Z") { vX = l; vY = w; vZ = t; } 
     else if (ORI === "X") { vX = t; vY = w; vZ = l; } 
@@ -884,38 +947,44 @@ function draw() {
 function drawAxis() {
     ctx.lineWidth = 2.5; 
     ctx.font = "bold 13px Inter, sans-serif";
-    // Dịch trục lên cao hơn
-    var x0 = 50, y0 = 230;
+    // Đặt vị trí trục ở góc trái dưới, dịch xuống để không bị khuất
+    var x0 = 35, y0 = 195;
+    
+    // Vẽ trục X (màu đỏ) - kéo dài hơn
     ctx.strokeStyle = "#ff6b6b"; 
     ctx.fillStyle = "#ff6b6b"; 
     ctx.shadowColor = "rgba(255,107,107,0.3)"; 
     ctx.shadowBlur = 8;
     ctx.beginPath(); 
     ctx.moveTo(x0, y0); 
-    ctx.lineTo(x0 + 50, y0); 
+    ctx.lineTo(x0 + 75, y0);
     ctx.stroke(); 
     ctx.shadowBlur = 0; 
-    ctx.fillText("X", x0 + 55, y0 + 4);
+    ctx.fillText("X", x0 + 80, y0 + 4);
+    
+    // Vẽ trục Y (màu xanh dương)
     ctx.strokeStyle = "#74b9ff"; 
     ctx.fillStyle = "#74b9ff"; 
     ctx.shadowColor = "rgba(116,185,255,0.3)"; 
     ctx.shadowBlur = 8;
     ctx.beginPath(); 
     ctx.moveTo(x0, y0); 
-    ctx.lineTo(x0 + 35, y0 - 35); 
+    ctx.lineTo(x0 + 45, y0 - 45);
     ctx.stroke(); 
     ctx.shadowBlur = 0; 
-    ctx.fillText("Y", x0 + 40, y0 - 38);
+    ctx.fillText("Y", x0 + 50, y0 - 48);
+    
+    // Vẽ trục Z (màu xanh lá) - kéo dài hơn
     ctx.strokeStyle = "#55efc4"; 
     ctx.fillStyle = "#55efc4"; 
     ctx.shadowColor = "rgba(85,239,196,0.3)"; 
     ctx.shadowBlur = 8;
     ctx.beginPath(); 
     ctx.moveTo(x0, y0); 
-    ctx.lineTo(x0, y0 - 50); 
+    ctx.lineTo(x0, y0 - 70);
     ctx.stroke(); 
     ctx.shadowBlur = 0; 
-    ctx.fillText("Z", x0 - 4, y0 - 55);
+    ctx.fillText("Z", x0 - 20, y0 - 75);
 }
 
 function projectISO(x, y, z, cx, cy) { 
@@ -1098,7 +1167,6 @@ function voiceSearchLibrary() {
             document.getElementById('voiceSearchBtn').classList.add('listening');
             document.getElementById('voiceSearchBtn').innerHTML = '<span class="btn-icon">⏹</span>';
             log("🎤 Listening for search query...", 'system');
-            // Hỏi bằng tiếng Việt
             var question = "Bạn muốn tìm kiếm thông tin gì?";
             log("🤖 " + question, 'assistant');
             speak(question);
@@ -1121,12 +1189,10 @@ function voiceSearchLibrary() {
             for (var i = e.resultIndex; i < e.results.length; i++) {
                 var text = e.results[i][0].transcript;
                 transcript += text;
-                // Kiểm tra xem có phải tiếng Việt không (có dấu)
                 if (/[áàảãạăắằẳẵặâấầẩẫậđéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵ]/i.test(text)) {
                     isVietnamese = true;
                 }
                 if (e.results[i].isFinal) {
-                    // Nếu là tiếng Việt thì để nguyên, nếu tiếng Anh thì giữ nguyên
                     document.getElementById('searchQuery').value = transcript;
                     applyFilters();
                     var lang = isVietnamese ? '🔍 Tìm kiếm: "' : '🔍 Search: "';
@@ -1171,6 +1237,7 @@ document.addEventListener('DOMContentLoaded', function() {
             } 
         });
     }
+    updateToolAddressDisplay();
     syncWithGoogleSheets();
 });
 
@@ -1211,4 +1278,3 @@ window.addEventListener("resize", draw);
 draw();
 log("🚀 3D Opening Tool Pro ready", 'system');
 log("📚 Press Library button to manage documents", 'system');
-// Đã xóa 2 dòng hiển thị URL và Google Sheets
