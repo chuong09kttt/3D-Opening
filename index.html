@@ -384,7 +384,7 @@
             <div id="syncStatus" style="margin-bottom: 14px; padding: 8px 14px; background: rgba(0,210,255,0.05); border: 1px solid rgba(0,210,255,0.1); border-radius: 8px; display: flex; align-items: center; gap: 10px;">
                 <span id="syncIcon" style="font-size: 14px;">🔄</span>
                 <span id="syncText" style="color: rgba(255,255,255,0.6); font-size: 12px;">Loading data...</span>
-                <button onclick="syncWithGoogleSheets()" class="btn btn-primary" style="flex: none; padding: 0 14px; height: 28px; font-size: 10px; margin-left: auto;">🔄 Refresh</button>
+                <button onclick="forceRefreshLibrary()" class="btn btn-primary" style="flex: none; padding: 0 14px; height: 28px; font-size: 10px; margin-left: auto;">🔄 Refresh</button>
             </div>
 
             <!-- Two-column layout -->
@@ -503,7 +503,6 @@
     </div>
 </div>
 
-    
 <script src="script.js"></script>
 </body>
 </html>
