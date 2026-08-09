@@ -10,8 +10,8 @@ let isSpeaking = false;
 let hasAutoTriggeredSave = false;
 
 // ==================== CONFIGURATION ====================
-const GOOGLE_SHEETS_DATA_URL = 'https://script.google.com/macros/s/AKfycbxKyUDePk4oFjbnt4Sa6NDzQ7ek3M1LHw00tVRYbEy_rRILlgYpd86ycN-eKirNh9BO/exec';
-const TOOL_DOWNLOAD_URL = 'https://drive.google.com/file/d/14NNDzXSCG63m1yQZb51tZhrZfd5k8KPf/view'; // Thay bằng link Drive của bạn
+const GOOGLE_SHEETS_DATA_URL = 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec';
+const TOOL_DOWNLOAD_URL = 'https://drive.google.com/drive/folders/YOUR_FOLDER_ID';
 
 let isSyncing = false;
 let library = [];
@@ -19,6 +19,7 @@ let deleteTargetIndex = null;
 let currentFilter = 'all';
 let currentDeptFilter = null;
 let isAddFormVisible = false;
+let syncTimeout = null;
 
 // Khai báo biến cho Library Voice
 let libraryVoiceRecognition = null;
@@ -36,12 +37,21 @@ function open3DOpeningTool() {
 }
 
 // ==================== SYNC FUNCTIONS ====================
-function syncWithGoogleSheets() {
-    if (isSyncing) return;
+function syncWithGoogleSheets(callback) {
+    if (isSyncing) {
+        if (syncTimeout) clearTimeout(syncTimeout);
+        syncTimeout = setTimeout(function() {
+            syncWithGoogleSheets(callback);
+        }, 500);
+        return;
+    }
+    
     isSyncing = true;
     updateSyncStatus('syncing', 'Loading data...');
     
-    const callbackName = 'jsonpCallback_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    var timestamp = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    const callbackName = 'jsonpCallback_' + timestamp;
+    
     window[callbackName] = function(response) {
         const scriptEl = document.getElementById(callbackName);
         if (scriptEl) document.body.removeChild(scriptEl);
@@ -59,22 +69,50 @@ function syncWithGoogleSheets() {
             updateCategoryCounts();
             updateSyncStatus('success', 'Loaded ' + library.length + ' documents');
             log('✅ Loaded ' + library.length + ' documents', 'system');
+            
+            if (typeof callback === 'function') {
+                callback(library);
+            }
         } else {
             handleLibraryError('Invalid data format from server');
+            if (typeof callback === 'function') {
+                callback([]);
+            }
         }
         isSyncing = false;
+        if (syncTimeout) {
+            clearTimeout(syncTimeout);
+            syncTimeout = null;
+        }
     };
 
     const script = document.createElement('script');
     script.id = callbackName;
-    script.src = GOOGLE_SHEETS_DATA_URL + '?action=get&callback=' + encodeURIComponent(callbackName) + '&t=' + Date.now();
+    script.src = GOOGLE_SHEETS_DATA_URL + '?action=get&callback=' + encodeURIComponent(callbackName) + '&t=' + timestamp;
     script.onerror = function() {
         handleLibraryError('Network error');
         if (document.getElementById(callbackName)) document.body.removeChild(document.getElementById(callbackName));
         delete window[callbackName];
         isSyncing = false;
+        if (syncTimeout) {
+            clearTimeout(syncTimeout);
+            syncTimeout = null;
+        }
+        if (typeof callback === 'function') {
+            callback([]);
+        }
     };
     document.body.appendChild(script);
+}
+
+function forceRefreshLibrary() {
+    log('🔄 Force refreshing library...', 'system');
+    document.getElementById('syncStatus').style.borderColor = 'rgba(0,210,255,0.5)';
+    syncWithGoogleSheets(function(updatedLibrary) {
+        if (updatedLibrary && updatedLibrary.length > 0) {
+            log('✅ Refreshed: ' + updatedLibrary.length + ' documents', 'system');
+        }
+    });
 }
 
 function handleLibraryError(errorMsg) {
@@ -162,8 +200,6 @@ function filterByCategory(category) {
     for (var i = 0; i < catEls.length; i++) catEls[i].classList.remove('active');
     var deptEls = document.querySelectorAll('.category-item[data-dept]');
     for (var j = 0; j < deptEls.length; j++) deptEls[j].classList.remove('active');
-    var toolEls = document.querySelectorAll('.category-item[data-tool]');
-    for (var k = 0; k < toolEls.length; k++) toolEls[k].classList.remove('active');
     var el = document.querySelector('.category-item[data-category="' + category + '"]');
     if (el) el.classList.add('active');
     applyFilters();
@@ -175,8 +211,6 @@ function filterByDepartment(department) {
     for (var i = 0; i < deptEls.length; i++) deptEls[i].classList.remove('active');
     var catEls = document.querySelectorAll('.category-item[data-category]');
     for (var j = 0; j < catEls.length; j++) catEls[j].classList.remove('active');
-    var toolEls = document.querySelectorAll('.category-item[data-tool]');
-    for (var k = 0; k < toolEls.length; k++) toolEls[k].classList.remove('active');
     var el = document.querySelector('.category-item[data-dept="' + department + '"]');
     if (el) el.classList.add('active');
     applyFilters();
@@ -186,11 +220,9 @@ function applyFilters() {
     var query = document.getElementById('searchQuery').value.trim();
     var filtered = library.slice();
     
-    // Category filter
     if (currentFilter !== 'all') {
         var catMap = {
-            'standards': ['standards', 'tiêu chuẩn', 'standard'],
-            'procedures': ['procedures', 'quy trình', 'procedure'],
+            'standards': ['standards', 'tiêu chuẩn', 'standard', 'rules'],
             'methods': ['methods', 'phương pháp', 'method'],
             'experience': ['experience', 'kinh nghiệm', 'experience']
         };
@@ -204,7 +236,6 @@ function applyFilters() {
         });
     }
     
-    // Department filter
     if (currentDeptFilter) {
         var deptMap = {
             'hull': ['hull', 'vỏ'],
@@ -223,7 +254,6 @@ function applyFilters() {
         });
     }
     
-    // Search query
     if (query) {
         var q = query.toLowerCase();
         filtered = filtered.filter(function(doc) {
@@ -242,26 +272,28 @@ function applyFilters() {
 
 // ==================== ADD DOCUMENT ====================
 function addDocumentToGoogleSheets(doc) {
-    var formData = new URLSearchParams();
-    formData.append('action', 'add');
-    formData.append('name', doc.name);
-    formData.append('link', doc.link);
-    formData.append('tags', doc.tags ? doc.tags.join(', ') : '');
-    formData.append('category', doc.category || 'others');
-    formData.append('department', doc.department || 'others');
+    return new Promise(function(resolve, reject) {
+        var formData = new URLSearchParams();
+        formData.append('action', 'add');
+        formData.append('name', doc.name);
+        formData.append('link', doc.link);
+        formData.append('tags', doc.tags ? doc.tags.join(', ') : '');
+        formData.append('category', doc.category || 'others');
+        formData.append('department', doc.department || 'others');
 
-    return fetch(GOOGLE_SHEETS_DATA_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: formData
-    }).then(function() {
-        return true;
-    }).catch(function(error) {
-        console.error('Add document via Form POST error:', error);
-        throw error;
+        fetch(GOOGLE_SHEETS_DATA_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: formData.toString()
+        }).then(function(response) {
+            resolve(true);
+        }).catch(function(error) {
+            console.error('Add document error:', error);
+            reject(error);
+        });
     });
 }
 
@@ -285,7 +317,9 @@ function addDocument() {
     if (!name) return alert('⚠️ Please enter document name');
     if (!link) return alert('⚠️ Please enter Drive link or description');
     
-    var exists = library.some(function(doc) { return doc.name.toLowerCase() === name.toLowerCase(); });
+    var exists = library.some(function(doc) { 
+        return doc.name.toLowerCase() === name.toLowerCase(); 
+    });
     if (exists) return alert('⚠️ Document "' + name + '" already exists in library');
     
     var newDoc = { 
@@ -296,35 +330,55 @@ function addDocument() {
         department: department 
     };
     
-    // Hiển thị loading
     var addBtn = document.querySelector('#addForm .btn-primary');
+    var originalText = '';
     if (addBtn) {
-        addBtn.textContent = '⏳';
+        originalText = addBtn.textContent;
+        addBtn.textContent = '⏳ Adding...';
         addBtn.disabled = true;
     }
     
+    log('📤 Adding document: "' + name + '"...', 'system');
+    
     addDocumentToGoogleSheets(newDoc).then(function() {
-        log('📤 Document "' + name + '" submitted successfully', 'system');
+        log('✅ Document "' + name + '" submitted successfully', 'system');
         updateSyncStatus('success', 'Added "' + name + '"');
         
-        // Reset form
         nameInput.value = '';
         linkInput.value = '';
         tagsInput.value = '';
         
-        // Sync lại để lấy dữ liệu đầy đủ từ cloud
         setTimeout(function() {
-            syncWithGoogleSheets();
-        }, 500);
+            log('🔄 Syncing with cloud...', 'system');
+            updateSyncStatus('syncing', 'Refreshing data...');
+            
+            syncWithGoogleSheets(function(updatedLibrary) {
+                if (updatedLibrary && updatedLibrary.length > 0) {
+                    log('✅ Loaded ' + updatedLibrary.length + ' documents', 'system');
+                    var found = updatedLibrary.some(function(doc) {
+                        return doc.name.toLowerCase() === name.toLowerCase();
+                    });
+                    if (found) {
+                        log('✅ Document "' + name + '" is now in the library', 'system');
+                    } else {
+                        log('⚠️ Document "' + name + '" not found. Try refreshing manually.', 'system');
+                    }
+                }
+                
+                if (addBtn) {
+                    addBtn.textContent = originalText || '➕ Add';
+                    addBtn.disabled = false;
+                }
+            });
+        }, 1500);
         
-        nameInput.focus();
     }).catch(function(error) {
         console.error('Add document error:', error);
-        alert('❌ Failed to submit document. Check your connection.');
-        log('⚠️ Failed to submit document', 'system');
-    }).finally(function() {
+        alert('❌ Failed to submit document. Please check your connection and try again.');
+        log('⚠️ Failed to submit document: ' + error.message, 'system');
+        
         if (addBtn) {
-            addBtn.textContent = '➕ Add';
+            addBtn.textContent = originalText || '➕ Add';
             addBtn.disabled = false;
         }
     });
@@ -487,7 +541,6 @@ function openLibrary() {
     if (modal) {
         modal.classList.add('active');
         document.body.style.overflow = 'hidden';
-        // Reset filters
         currentFilter = 'all';
         currentDeptFilter = null;
         var allEls = document.querySelectorAll('.category-item');
@@ -888,7 +941,6 @@ function draw() {
     var l = L * scale; 
     var w = W * scale; 
     var t = T * scale;
-    // Dịch canvas sang phải và xuống dưới để tránh đè lên trục
     var cx = c.width / 2 + 40 + (posX * scale); 
     var cy = c.height / 2 + 20 - (posZ * scale);
     var vX, vY, vZ;
@@ -901,10 +953,8 @@ function draw() {
 function drawAxis() {
     ctx.lineWidth = 2.5; 
     ctx.font = "bold 13px Inter, sans-serif";
-    // Đặt vị trí trục ở góc trái dưới, dịch xuống để không bị khuất
     var x0 = 35, y0 = 195;
     
-    // Vẽ trục X (màu đỏ) - kéo dài hơn
     ctx.strokeStyle = "#ff6b6b"; 
     ctx.fillStyle = "#ff6b6b"; 
     ctx.shadowColor = "rgba(255,107,107,0.3)"; 
@@ -916,7 +966,6 @@ function drawAxis() {
     ctx.shadowBlur = 0; 
     ctx.fillText("X", x0 + 80, y0 + 4);
     
-    // Vẽ trục Y (màu xanh dương)
     ctx.strokeStyle = "#74b9ff"; 
     ctx.fillStyle = "#74b9ff"; 
     ctx.shadowColor = "rgba(116,185,255,0.3)"; 
@@ -928,7 +977,6 @@ function drawAxis() {
     ctx.shadowBlur = 0; 
     ctx.fillText("Y", x0 + 50, y0 - 48);
     
-    // Vẽ trục Z (màu xanh lá) - kéo dài hơn
     ctx.strokeStyle = "#55efc4"; 
     ctx.fillStyle = "#55efc4"; 
     ctx.shadowColor = "rgba(85,239,196,0.3)"; 
@@ -1096,8 +1144,6 @@ function closeHelp() {
     } 
 }
 
-
-
 // ==================== LIBRARY VOICE SEARCH ====================
 function voiceSearchLibrary() {
     if (isLibraryVoiceListening) {
@@ -1114,7 +1160,7 @@ function voiceSearchLibrary() {
         }
         
         libraryVoiceRecognition = new SR();
-        libraryVoiceRecognition.lang = "en-US"; // Mặc định tiếng Anh, sẽ tự động nhận diện
+        libraryVoiceRecognition.lang = "en-US";
         libraryVoiceRecognition.continuous = false;
         libraryVoiceRecognition.interimResults = true;
         
@@ -1124,7 +1170,6 @@ function voiceSearchLibrary() {
             document.getElementById('voiceSearchBtn').innerHTML = '<span class="btn-icon">⏹</span>';
             log("🎤 Listening for search query...", 'system');
             
-            // Gửi lời chào bằng cả tiếng Anh và tiếng Việt
             var greeting = "What would you like to search for? / Bạn muốn tìm kiếm điều gì?";
             log("🤖 " + greeting, 'assistant');
             speak(greeting);
@@ -1149,28 +1194,21 @@ function voiceSearchLibrary() {
                 var text = e.results[i][0].transcript;
                 transcript += text;
                 
-                // Kiểm tra ngôn ngữ
                 if (/[áàảãạăắằẳẵặâấầẩẫậđéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵ]/i.test(text)) {
                     isVietnamese = true;
                 }
                 
                 if (e.results[i].isFinal) {
-                    // Đặt text vào ô tìm kiếm
                     document.getElementById('searchQuery').value = transcript;
-                    
-                    // Thực hiện tìm kiếm
                     applyFilters();
                     
-                    // Hiển thị kết quả tìm kiếm
                     var lang = isVietnamese ? '🔍 Tìm kiếm: "' : '🔍 Search: "';
                     log(lang + transcript + '"', 'user');
                     
-                    // Tự động mở document đầu tiên nếu tìm thấy
                     var results = performSmartSearch(transcript);
                     if (results.length > 0) {
                         var bestMatch = results[0];
                         if (bestMatch && bestMatch.link) {
-                            // Mở link trong tab mới
                             if (bestMatch.link.indexOf('http://') === 0 || bestMatch.link.indexOf('https://') === 0) {
                                 window.open(bestMatch.link, '_blank');
                                 log('📂 Opening: ' + bestMatch.name, 'system');
@@ -1189,7 +1227,6 @@ function voiceSearchLibrary() {
                         speak(notFound);
                     }
                     
-                    // Dừng voice sau khi xử lý
                     stopLibraryVoice();
                 }
             }
@@ -1217,10 +1254,6 @@ function stopLibraryVoice() {
         btn.innerHTML = '<span class="btn-icon">🎤</span>';
     }
 }
-
-
-
-
 
 // ==================== EVENT LISTENERS ====================
 document.addEventListener('DOMContentLoaded', function() {
