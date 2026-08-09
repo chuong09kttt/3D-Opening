@@ -368,52 +368,116 @@
     </div>
 </div>
 
-<!-- Library Modal -->
+<!-- Library Modal - Redesigned like the image -->
 <div class="modal-overlay" id="libraryModal">
-    <div class="modal" style="max-width: 750px;">
+    <div class="modal" style="max-width: 820px;">
         <div class="modal-header">
             <div class="modal-title">
                 <span class="modal-icon">📚</span>
-                <h2>Document Library</h2>
+                <h2>LIBRARY</h2>
             </div>
             <button class="modal-close" onclick="closeLibrary()">✕</button>
         </div>
-        <div class="modal-body">
+        <div class="modal-body" style="padding: 16px 20px;">
+            
             <!-- Sync Status -->
-            <div id="syncStatus" style="margin-bottom: 12px; padding: 8px 12px; background: rgba(0,210,255,0.05); border: 1px solid rgba(0,210,255,0.1); border-radius: 8px; display: flex; align-items: center; gap: 8px;">
-                <span id="syncIcon" style="font-size: 16px;">🔄</span>
-                <span id="syncText" style="color: rgba(255,255,255,0.7); font-size: 12px;">Loading data...</span>
-                <button onclick="syncWithGoogleSheets()" class="btn btn-primary" style="flex: none; padding: 0 12px; height: 28px; font-size: 10px; margin-left: auto;">🔄 Refresh</button>
+            <div id="syncStatus" style="margin-bottom: 14px; padding: 8px 14px; background: rgba(0,210,255,0.05); border: 1px solid rgba(0,210,255,0.1); border-radius: 8px; display: flex; align-items: center; gap: 10px;">
+                <span id="syncIcon" style="font-size: 14px;">🔄</span>
+                <span id="syncText" style="color: rgba(255,255,255,0.6); font-size: 12px;">Loading data...</span>
+                <button onclick="syncWithGoogleSheets()" class="btn btn-primary" style="flex: none; padding: 0 14px; height: 28px; font-size: 10px; margin-left: auto;">🔄 Refresh</button>
             </div>
 
-            <!-- Search Section -->
-            <div style="margin-bottom: 16px; background: rgba(255,255,255,0.03); border-radius: 12px; padding: 14px; border: 1px solid rgba(255,255,255,0.06);">
-                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-                    <span style="font-size: 16px;">🔍</span>
-                    <span style="color: rgba(255,255,255,0.7); font-weight: 600; font-size: 13px;">Search Documents</span>
-                    <button class="btn btn-voice" onclick="voiceSearchLibrary()" id="voiceSearchBtn" style="flex: none; padding: 0 16px; height: 32px; font-size: 11px; margin-left: auto;">
-                        <span class="btn-icon">🎤</span> Voice
-                    </button>
+            <!-- Two-column layout: Sidebar + Content -->
+            <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                <!-- Left Sidebar -->
+                <div style="flex: 0 0 200px; min-width: 160px;">
+                    <!-- DANH MỤC -->
+                    <div style="margin-bottom: 18px;">
+                        <h4 style="color: rgba(255,255,255,0.4); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">📂 Danh mục</h4>
+                        <div id="categoryList" style="display: flex; flex-direction: column; gap: 3px;">
+                            <div class="category-item active" data-category="all" onclick="filterByCategory('all')">
+                                <span>📄</span> Tất cả tài liệu <span class="cat-count" id="countAll">0</span>
+                            </div>
+                            <div class="category-item" data-category="standards" onclick="filterByCategory('standards')">
+                                <span>📋</span> Tiêu chuẩn <span class="cat-count" id="countStandards">0</span>
+                            </div>
+                            <div class="category-item" data-category="procedures" onclick="filterByCategory('procedures')">
+                                <span>📝</span> Quy trình <span class="cat-count" id="countProcedures">0</span>
+                            </div>
+                            <div class="category-item" data-category="methods" onclick="filterByCategory('methods')">
+                                <span>🔧</span> Phương pháp <span class="cat-count" id="countMethods">0</span>
+                            </div>
+                            <div class="category-item" data-category="experience" onclick="filterByCategory('experience')">
+                                <span>💡</span> Kinh nghiệm <span class="cat-count" id="countExperience">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- THEO BỘ PHẬN -->
+                    <div style="margin-bottom: 18px;">
+                        <h4 style="color: rgba(255,255,255,0.4); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">🏗️ Theo bộ phận</h4>
+                        <div id="departmentList" style="display: flex; flex-direction: column; gap: 3px;">
+                            <div class="category-item" data-dept="hull" onclick="filterByDepartment('hull')">
+                                <span>🚢</span> Vỏ <span class="cat-count" id="countHull">0</span>
+                            </div>
+                            <div class="category-item" data-dept="piping" onclick="filterByDepartment('piping')">
+                                <span>🔧</span> Ống <span class="cat-count" id="countPiping">0</span>
+                            </div>
+                            <div class="category-item" data-dept="electrical" onclick="filterByDepartment('electrical')">
+                                <span>⚡</span> Điện <span class="cat-count" id="countElectrical">0</span>
+                            </div>
+                            <div class="category-item" data-dept="outfitting" onclick="filterByDepartment('outfitting')">
+                                <span>🛠️</span> Kết cấu phụ <span class="cat-count" id="countOutfitting">0</span>
+                            </div>
+                            <div class="category-item" data-dept="others" onclick="filterByDepartment('others')">
+                                <span>📎</span> Khác <span class="cat-count" id="countOthers">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CÔNG CỤ -->
+                    <div>
+                        <h4 style="color: rgba(255,255,255,0.4); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">🛠️ Công cụ</h4>
+                        <div style="display: flex; flex-direction: column; gap: 3px;">
+                            <div class="category-item" onclick="filterByTool('3d')">
+                                <span>🧊</span> 3D Opening Tool <span class="cat-count">5</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div style="display: flex; gap: 10px;">
-                    <input id="searchQuery" type="text" placeholder="Search by name or tags..." 
-                           style="flex: 1; height: 40px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 14px; padding: 0 14px; outline: none; font-family: 'Inter', sans-serif;">
-                    <button class="btn btn-primary" onclick="searchDocuments()" style="flex: none; padding: 0 24px; height: 40px;">🔍 Search</button>
+
+                <!-- Right Content -->
+                <div style="flex: 1; min-width: 280px;">
+                    <!-- Search & Add -->
+                    <div style="display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap;">
+                        <input id="searchQuery" type="text" placeholder="🔍 Tìm kiếm tài liệu..." 
+                               style="flex: 1; min-width: 150px; height: 36px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; color: #fff; font-size: 13px; padding: 0 14px; outline: none; font-family: 'Inter', sans-serif;"
+                               oninput="searchDocuments()">
+                        <button class="btn btn-voice" onclick="voiceSearchLibrary()" id="voiceSearchBtn" style="flex: none; padding: 0 16px; height: 36px; font-size: 11px;">
+                            <span class="btn-icon">🎤</span>
+                        </button>
+                        <button class="btn btn-primary" onclick="toggleAddForm()" style="flex: none; padding: 0 16px; height: 36px; font-size: 11px;">➕ Thêm</button>
+                    </div>
+
+                    <!-- Add Document Form (hidden by default) -->
+                    <div id="addForm" style="display: none; background: rgba(255,255,255,0.03); border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; border: 1px solid rgba(255,255,255,0.06);">
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <input id="newDocName" type="text" placeholder="Tên tài liệu..." style="flex: 1; min-width: 120px; height: 34px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; color: #fff; font-size: 12px; padding: 0 12px; outline: none; font-family: 'Inter', sans-serif;">
+                            <input id="newDocLink" type="text" placeholder="Drive link..." style="flex: 2; min-width: 150px; height: 34px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; color: #fff; font-size: 12px; padding: 0 12px; outline: none; font-family: 'Inter', sans-serif;">
+                            <input id="newDocTags" type="text" placeholder="Tags (phân cách bằng dấu phẩy)..." style="flex: 1; min-width: 100px; height: 34px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; color: #fff; font-size: 12px; padding: 0 12px; outline: none; font-family: 'Inter', sans-serif;">
+                            <button class="btn btn-primary" onclick="addDocument()" style="flex: none; padding: 0 16px; height: 34px; font-size: 11px;">➕ Add</button>
+                            <button class="btn btn-reset" onclick="toggleAddForm()" style="flex: none; padding: 0 12px; height: 34px; font-size: 11px;">✕</button>
+                        </div>
+                    </div>
+
+                    <!-- Search Results -->
+                    <div id="searchResults" style="display: none; margin-bottom: 10px;"></div>
+
+                    <!-- Document List -->
+                    <div id="libraryList" style="max-height: 340px; overflow-y: auto;">
+                        <!-- Documents rendered here -->
+                    </div>
                 </div>
-                <div id="searchResults" style="margin-top: 10px; display: none;"></div>
-            </div>
-
-            <!-- Add Document Section -->
-            <div style="margin-bottom: 16px; display: flex; gap: 10px; flex-wrap: wrap; background: rgba(255,255,255,0.02); border-radius: 12px; padding: 14px; border: 1px solid rgba(255,255,255,0.04);">
-                <input id="newDocName" type="text" placeholder="Document name..." style="flex: 1; min-width: 150px; height: 40px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 14px; padding: 0 14px; outline: none; font-family: 'Inter', sans-serif;">
-                <input id="newDocLink" type="text" placeholder="Drive link..." style="flex: 2; min-width: 200px; height: 40px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 14px; padding: 0 14px; outline: none; font-family: 'Inter', sans-serif;">
-                <input id="newDocTags" type="text" placeholder="Tags (comma separated)..." style="flex: 1; min-width: 120px; height: 40px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 14px; padding: 0 14px; outline: none; font-family: 'Inter', sans-serif;">
-                <button class="btn btn-primary" onclick="addDocument()" id="addDocBtn" style="flex: none; padding: 0 20px; height: 40px;">➕ Add</button>
-            </div>
-
-            <!-- Document List -->
-            <div id="libraryList" style="max-height: 250px; overflow-y: auto;">
-                <!-- Documents rendered here -->
             </div>
         </div>
         <div class="modal-footer">
