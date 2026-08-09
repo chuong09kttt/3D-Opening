@@ -10,14 +10,18 @@ let isSpeaking = false;
 let hasAutoTriggeredSave = false;
 
 // ==================== CONFIGURATION ====================
-// 👇 QUAN TRỌNG: Điền URL Apps Script mới bạn vừa Deploy ở Bước 1 vào đây
 const GOOGLE_SHEETS_DATA_URL = 'https://script.google.com/macros/s/AKfycbz9EF-jw28rFIkCekd6NWyCldCK9HR-YHO2pVne85D3tIdU6bBc7L-bD5-ZZULIXZbv/exec';
 
 let isSyncing = false;
 let library = [];
 let deleteTargetIndex = null;
+let currentFilter = 'all';
+let currentDeptFilter = null;
+let isAddFormVisible = false;
+let libraryVoiceRecognition = null;
+let isLibraryVoiceListening = false;
 
-// ==================== SYNC FUNCTIONS (JSONP - ĐỌC DỮ LIỆU - CORS OK) ====================
+// ==================== SYNC FUNCTIONS ====================
 function syncWithGoogleSheets() {
     if (isSyncing) return;
     isSyncing = true;
@@ -33,9 +37,12 @@ function syncWithGoogleSheets() {
             library = response.data.map(item => ({
                 name: item.Name || item.name || 'Untitled',
                 link: item.Link || item.link || '',
-                tags: item.Tags ? item.Tags.split(',').map(t => t.trim()).filter(t => t) : []
+                tags: item.Tags ? item.Tags.split(',').map(t => t.trim()).filter(t => t) : [],
+                category: item.Category || item.category || 'others',
+                department: item.Department || item.department || 'others'
             }));
             renderLibrary();
+            updateCategoryCounts();
             updateSyncStatus('success', `Loaded ${library.length} documents`);
             log(`✅ Loaded ${library.length} documents from Google Sheets`, 'system');
         } else {
@@ -62,9 +69,10 @@ function handleLibraryError(errorMsg) {
     updateSyncStatus('error', 'Connection error');
     const list = document.getElementById('libraryList');
     if (list) {
-        list.innerHTML = `<div style="text-align: center; color: rgba(255,255,255,0.5); padding: 30px 0;">
-            ❌ Cannot connect to Google Sheets
-            <br><span style="font-size: 12px;">Please check your internet connection</span>
+        list.innerHTML = `<div class="connection-error-box">
+            <div class="error-icon-big">📡</div>
+            <div class="main-msg">Cannot connect to Google Sheets</div>
+            <div class="sub-msg">Please check your internet connection</div>
         </div>`;
     }
     library = [];
@@ -84,41 +92,124 @@ function updateSyncStatus(status, text) {
     }
 }
 
-// ==================== ADD DOCUMENT (URL ENCODED FORM POST - TRÁNH CORS) ====================
+function updateCategoryCounts() {
+    const counts = { all: library.length, standards: 0, procedures: 0, methods: 0, experience: 0 };
+    const deptCounts = { hull: 0, piping: 0, electrical: 0, outfitting: 0, others: 0 };
+    
+    library.forEach(doc => {
+        const cat = doc.category || 'others';
+        if (cat === 'standards' || cat === 'tiêu chuẩn') counts.standards++;
+        else if (cat === 'procedures' || cat === 'quy trình') counts.procedures++;
+        else if (cat === 'methods' || cat === 'phương pháp') counts.methods++;
+        else if (cat === 'experience' || cat === 'kinh nghiệm') counts.experience++;
+        
+        const dept = doc.department || 'others';
+        if (dept === 'hull' || dept === 'vỏ') deptCounts.hull++;
+        else if (dept === 'piping' || dept === 'ống') deptCounts.piping++;
+        else if (dept === 'electrical' || dept === 'điện') deptCounts.electrical++;
+        else if (dept === 'outfitting' || dept === 'kết cấu phụ') deptCounts.outfitting++;
+        else deptCounts.others++;
+    });
+    
+    document.getElementById('countAll').textContent = counts.all;
+    document.getElementById('countStandards').textContent = counts.standards;
+    document.getElementById('countProcedures').textContent = counts.procedures;
+    document.getElementById('countMethods').textContent = counts.methods;
+    document.getElementById('countExperience').textContent = counts.experience;
+    document.getElementById('countHull').textContent = deptCounts.hull;
+    document.getElementById('countPiping').textContent = deptCounts.piping;
+    document.getElementById('countElectrical').textContent = deptCounts.electrical;
+    document.getElementById('countOutfitting').textContent = deptCounts.outfitting;
+    document.getElementById('countOthers').textContent = deptCounts.others;
+}
+
+// ==================== CATEGORY FILTERS ====================
+function filterByCategory(category) {
+    currentFilter = category;
+    currentDeptFilter = null;
+    document.querySelectorAll('.category-item[data-category]').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.category-item[data-dept]').forEach(el => el.classList.remove('active'));
+    const el = document.querySelector(`.category-item[data-category="${category}"]`);
+    if (el) el.classList.add('active');
+    applyFilters();
+}
+
+function filterByDepartment(department) {
+    currentDeptFilter = department;
+    document.querySelectorAll('.category-item[data-dept]').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.category-item[data-category]').forEach(el => el.classList.remove('active'));
+    const el = document.querySelector(`.category-item[data-dept="${department}"]`);
+    if (el) el.classList.add('active');
+    applyFilters();
+}
+
+function filterByTool(tool) {
+    // Just for demo - show 3D tool count
+    log('🔧 3D Opening Tool: 5 documents available', 'system');
+}
+
+function applyFilters() {
+    const query = document.getElementById('searchQuery').value.trim();
+    let filtered = [...library];
+    
+    // Category filter
+    if (currentFilter !== 'all') {
+        const catMap = {
+            'standards': ['standards', 'tiêu chuẩn', 'standard'],
+            'procedures': ['procedures', 'quy trình', 'procedure'],
+            'methods': ['methods', 'phương pháp', 'method'],
+            'experience': ['experience', 'kinh nghiệm', 'experience']
+        };
+        const keywords = catMap[currentFilter] || [];
+        filtered = filtered.filter(doc => {
+            const cat = (doc.category || '').toLowerCase();
+            return keywords.some(kw => cat.includes(kw));
+        });
+    }
+    
+    // Department filter
+    if (currentDeptFilter) {
+        const deptMap = {
+            'hull': ['hull', 'vỏ'],
+            'piping': ['piping', 'ống'],
+            'electrical': ['electrical', 'điện'],
+            'outfitting': ['outfitting', 'kết cấu phụ'],
+            'others': ['others', 'khác']
+        };
+        const keywords = deptMap[currentDeptFilter] || [];
+        filtered = filtered.filter(doc => {
+            const dept = (doc.department || '').toLowerCase();
+            return keywords.some(kw => dept.includes(kw));
+        });
+    }
+    
+    // Search query
+    if (query) {
+        const q = query.toLowerCase();
+        filtered = filtered.filter(doc => {
+            const name = (doc.name || '').toLowerCase();
+            const tags = (doc.tags || []).map(t => t.toLowerCase());
+            return name.includes(q) || tags.some(t => t.includes(q));
+        });
+    }
+    
+    renderLibrary(filtered);
+}
+
+// ==================== ADD DOCUMENT ====================
 async function addDocumentToGoogleSheets(doc) {
     const formData = new URLSearchParams();
     formData.append('action', 'add');
     formData.append('name', doc.name);
     formData.append('link', doc.link);
     formData.append('tags', doc.tags ? doc.tags.join(', ') : '');
+    formData.append('category', doc.category || '');
+    formData.append('department', doc.department || '');
 
     try {
         const response = await fetch(GOOGLE_SHEETS_DATA_URL, {
             method: 'POST',
-            mode: 'no-cors', // KHÔNG cần đọc phản hồi CORS, chỉ gửi đi. Trình duyệt sẽ tự gửi mà không cần Preflight.
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: formData
-        });
-        return true; // Vì mode 'no-cors' nên response bị opaque, nhưng yêu cầu đã được gửi thành công.
-    } catch (error) {
-        console.error('Add document via Form POST error:', error);
-        throw error;
-    }
-}
-
-// ==================== DELETE DOCUMENT (URL ENCODED FORM POST - TRÁNH CORS) ====================
-async function deleteDocumentFromGoogleSheets(index, password) {
-    const formData = new URLSearchParams();
-    formData.append('action', 'delete');
-    formData.append('index', index);
-    formData.append('password', password);
-
-    try {
-        const response = await fetch(GOOGLE_SHEETS_DATA_URL, {
-            method: 'POST',
-            mode: 'no-cors', // Tránh Preflight CORS
+            mode: 'no-cors',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded'
             },
@@ -126,12 +217,11 @@ async function deleteDocumentFromGoogleSheets(index, password) {
         });
         return true;
     } catch (error) {
-        console.error('Delete document via Form POST error:', error);
+        console.error('Add document via Form POST error:', error);
         throw error;
     }
 }
 
-// ==================== ADD DOCUMENT UI ====================
 async function addDocument() {
     const nameInput = document.getElementById('newDocName');
     const linkInput = document.getElementById('newDocLink');
@@ -149,24 +239,21 @@ async function addDocument() {
     const exists = library.some(doc => doc.name.toLowerCase() === name.toLowerCase());
     if (exists) return alert(`⚠️ Document "${name}" already exists in library`);
     
-    const newDoc = { name, link, tags };
+    const newDoc = { name, link, tags, category: 'others', department: 'others' };
     
     try {
-        // Gửi dạng x-www-form-urlencoded (Không bị CORS)
         await addDocumentToGoogleSheets(newDoc);
-        
-        // Vì dùng no-cors, ta tạm thêm ảo vào Library để hiển thị ngay
         library.push(newDoc);
         renderLibrary();
+        updateCategoryCounts();
         
         nameInput.value = '';
         linkInput.value = '';
         tagsInput.value = '';
         
-        log(`📤 Document "${name}" submitted via Form Post`, 'system');
+        log(`📤 Document "${name}" submitted`, 'system');
         updateSyncStatus('success', `Sent "${name}". Will auto-refresh.`);
         
-        // Đợi 1.5 giây để Google Sheet cập nhật, sau đó dùng JSONP tải lại để xác nhận dữ liệu thật
         setTimeout(() => {
             syncWithGoogleSheets();
         }, 1500);
@@ -175,11 +262,22 @@ async function addDocument() {
     } catch (error) {
         console.error('Add document error:', error);
         alert('❌ Failed to submit document. Check your connection.');
-        log('⚠️ Failed to submit document via Form Post', 'system');
+        log('⚠️ Failed to submit document', 'system');
     }
 }
 
-// ==================== DELETE DOCUMENT UI ====================
+function toggleAddForm() {
+    isAddFormVisible = !isAddFormVisible;
+    const form = document.getElementById('addForm');
+    if (form) {
+        form.style.display = isAddFormVisible ? 'block' : 'none';
+        if (isAddFormVisible) {
+            document.getElementById('newDocName').focus();
+        }
+    }
+}
+
+// ==================== DELETE DOCUMENT ====================
 function showDeletePassword(index) {
     deleteTargetIndex = index;
     const doc = library[index];
@@ -223,19 +321,15 @@ async function confirmDeleteWithPassword() {
         const doc = library[deleteTargetIndex];
         try {
             await deleteDocumentFromGoogleSheets(deleteTargetIndex, password);
-            
-            // Vì dùng no-cors, ta không đọc được response -> Giả định thành công, xóa khỏi UI
             library.splice(deleteTargetIndex, 1);
             renderLibrary();
+            updateCategoryCounts();
             log(`🗑️ Deleted: ${doc.name}`, 'system');
             closePasswordModal();
             updateSyncStatus('success', `Deleted: ${doc.name}`);
-            
-            // Đợi 1 giây để Google Sheet cập nhật, sau đó xác nhận lại
             setTimeout(() => {
                 syncWithGoogleSheets();
             }, 1000);
-            
         } catch (error) {
             console.error('Delete error:', error);
             alert('❌ Failed to delete document from cloud.');
@@ -247,20 +341,56 @@ async function confirmDeleteWithPassword() {
     }
 }
 
+async function deleteDocumentFromGoogleSheets(index, password) {
+    const formData = new URLSearchParams();
+    formData.append('action', 'delete');
+    formData.append('index', index);
+    formData.append('password', password);
+
+    try {
+        const response = await fetch(GOOGLE_SHEETS_DATA_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: formData
+        });
+        return true;
+    } catch (error) {
+        console.error('Delete document via Form POST error:', error);
+        throw error;
+    }
+}
+
 // ==================== LIBRARY UI FUNCTIONS ====================
 function renderLibrary(filteredList = null) {
     const list = document.getElementById('libraryList');
     if (!list) return;
     const docs = filteredList || library;
-    if (docs.length === 0) { list.innerHTML = `<div style="text-align: center; color: rgba(255,255,255,0.4); padding: 30px 0;">📭 No documents found</div>`; return; }
+    if (docs.length === 0) { 
+        list.innerHTML = `<div style="text-align: center; color: rgba(255,255,255,0.4); padding: 40px 0;">
+            <div style="font-size: 40px; margin-bottom: 10px;">📭</div>
+            <div>No documents found</div>
+        </div>`; 
+        return; 
+    }
     list.innerHTML = docs.map((doc, index) => {
         const originalIndex = library.indexOf(doc);
-        const tagsHtml = doc.tags && doc.tags.length > 0 ? `<div style="display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px;">${doc.tags.map(tag => `<span style="background: rgba(108,92,231,0.2); color: #a29bfe; padding: 2px 8px; border-radius: 4px; font-size: 10px;">#${tag}</span>`).join('')}</div>` : '';
-        return `<div class="library-item" style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: rgba(255,255,255,0.03); border-radius: 10px; margin-bottom: 8px; border: 1px solid rgba(255,255,255,0.05);">
-            <span style="font-size: 20px;">📄</span>
-            <div style="flex: 1; min-width: 0;"><div style="font-weight: 600; color: #fff; font-size: 14px;">${doc.name}</div>${tagsHtml}</div>
-            <button onclick="openDocument(${originalIndex})" class="btn btn-primary" style="flex: none; padding: 0 16px; height: 32px; font-size: 11px;">📂 Open</button>
-            <button onclick="showDeletePassword(${originalIndex})" class="btn btn-reset" style="flex: none; padding: 0 12px; height: 32px; font-size: 11px; background: rgba(255,0,0,0.2);">✕</button>
+        const tagsHtml = doc.tags && doc.tags.length > 0 ? 
+            `<div class="doc-tags">${doc.tags.map(tag => `<span class="doc-tag">#${tag}</span>`).join('')}</div>` : '';
+        const categoryLabel = doc.category || 'Others';
+        return `<div class="doc-item">
+            <span class="doc-icon">📄</span>
+            <div class="doc-info">
+                <div class="doc-name">${doc.name}</div>
+                <div class="doc-meta">${categoryLabel}</div>
+                ${tagsHtml}
+            </div>
+            <div class="doc-actions">
+                <button class="btn-open" onclick="openDocument(${originalIndex})">📂 Open</button>
+                <button class="btn-delete" onclick="showDeletePassword(${originalIndex})">✕</button>
+            </div>
         </div>`;
     }).join('');
 }
@@ -279,9 +409,16 @@ function openLibrary() {
     if (modal) {
         modal.classList.add('active');
         document.body.style.overflow = 'hidden';
-        renderLibrary();
+        // Reset filters
+        currentFilter = 'all';
+        currentDeptFilter = null;
+        document.querySelectorAll('.category-item').forEach(el => el.classList.remove('active'));
+        const allEl = document.querySelector('.category-item[data-category="all"]');
+        if (allEl) allEl.classList.add('active');
         document.getElementById('searchQuery').value = '';
         document.getElementById('searchResults').style.display = 'none';
+        renderLibrary();
+        updateCategoryCounts();
         log("📚 Library opened", 'system');
         syncWithGoogleSheets();
     }
@@ -293,24 +430,13 @@ function closeLibrary() {
         modal.classList.remove('active');
         document.body.style.overflow = '';
         closePasswordModal();
+        if (isAddFormVisible) toggleAddForm();
     }
 }
 
 // ==================== SEARCH FUNCTIONS ====================
 function searchDocuments() {
-    const query = document.getElementById('searchQuery').value.trim();
-    if (!query) { renderLibrary(); document.getElementById('searchResults').style.display = 'none'; return; }
-    const results = performSmartSearch(query);
-    const resultsDiv = document.getElementById('searchResults');
-    if (results.length === 0) {
-        resultsDiv.style.display = 'block';
-        resultsDiv.innerHTML = `<div style="text-align: center; color: rgba(255,255,255,0.5); padding: 15px 0;">🔍 No documents found for "${query}"<br><span style="font-size: 12px;">Try different keywords or add new documents</span></div>`;
-        renderLibrary();
-        return;
-    }
-    resultsDiv.style.display = 'block';
-    resultsDiv.innerHTML = `<div style="color: rgba(255,255,255,0.6); font-size: 12px; margin-bottom: 8px;">✅ Found ${results.length} result(s) for "${query}"</div>`;
-    renderLibrary(results);
+    applyFilters();
 }
 
 function performSmartSearch(query) {
@@ -357,8 +483,13 @@ function processFullVoiceNLP(t) {
         if (searchQuery && searchQuery.length > 1) {
             document.getElementById('searchQuery').value = searchQuery;
             const results = performSmartSearch(searchQuery);
-            if (results.length > 0) { const bestMatch = results[0]; if (bestMatch.link) { if (bestMatch.link.startsWith('http://') || bestMatch.link.startsWith('https://')) window.open(bestMatch.link, '_blank'); } searchDocuments(); } 
-            else searchDocuments();
+            if (results.length > 0) { 
+                const bestMatch = results[0]; 
+                if (bestMatch.link) { 
+                    if (bestMatch.link.startsWith('http://') || bestMatch.link.startsWith('https://')) window.open(bestMatch.link, '_blank'); 
+                } 
+                searchDocuments(); 
+            } else searchDocuments();
             const modal = document.getElementById('libraryModal');
             if (!modal.classList.contains('active')) openLibrary();
         }
@@ -458,6 +589,8 @@ function autoSaveDialog() {
         if (modal) { modal.classList.add('active'); document.body.style.overflow = 'hidden'; document.getElementById('saveFileName').value = `Opening_${L}x${W}x${T}`; log("📁 Opening save dialog...", 'system'); }
     }
 }
+
+function saveFile() { autoSaveDialog(); }
 
 function closeSaveDialog() {
     const modal = document.getElementById('saveModal');
@@ -625,14 +758,14 @@ function voiceSearchLibrary() {
         }
         
         libraryVoiceRecognition = new SR();
-        libraryVoiceRecognition.lang = "en-US";
+        libraryVoiceRecognition.lang = "vi-VN";
         libraryVoiceRecognition.continuous = false;
         libraryVoiceRecognition.interimResults = true;
         
         libraryVoiceRecognition.onstart = () => {
             isLibraryVoiceListening = true;
             document.getElementById('voiceSearchBtn').classList.add('listening');
-            document.getElementById('voiceSearchBtn').innerHTML = '<span class="btn-icon">⏹</span> Stop';
+            document.getElementById('voiceSearchBtn').innerHTML = '<span class="btn-icon">⏹</span>';
             log("🎤 Listening for search query...", 'system');
         };
         
@@ -653,27 +786,8 @@ function voiceSearchLibrary() {
                 transcript += e.results[i][0].transcript;
                 if (e.results[i].isFinal) {
                     document.getElementById('searchQuery').value = transcript;
-                    
-                    const results = performSmartSearch(transcript);
-                    
-                    if (results.length > 0) {
-                        const bestMatch = results[0];
-                        if (bestMatch.link) {
-                            if (bestMatch.link.startsWith('http://') || bestMatch.link.startsWith('https://')) {
-                                window.open(bestMatch.link, '_blank');
-                            } else {
-                                log(`📄 Info: ${bestMatch.link}`, 'system');
-                            }
-                            log(`🎤 Voice: Opened "${bestMatch.name}"`, 'assistant');
-                            speak(`Opening ${bestMatch.name}`);
-                        }
-                        searchDocuments();
-                    } else {
-                        log(`🔍 Voice: "${transcript}" - No results found`, 'user');
-                        speak(`No results found for "${transcript}"`);
-                        searchDocuments();
-                    }
-                    
+                    applyFilters();
+                    log(`🔍 Voice search: "${transcript}"`, 'user');
                     stopLibraryVoice();
                 }
             }
@@ -695,30 +809,8 @@ function stopLibraryVoice() {
     const btn = document.getElementById('voiceSearchBtn');
     if (btn) {
         btn.classList.remove('listening');
-        btn.innerHTML = '<span class="btn-icon">🎤</span> Voice';
+        btn.innerHTML = '<span class="btn-icon">🎤</span>';
     }
-}
-
-function searchAndOpenDocument(name) {
-    if (!name || name.trim().length < 2) return false;
-    
-    const results = performSmartSearch(name);
-    
-    if (results.length > 0) {
-        const bestMatch = results[0];
-        if (bestMatch.link) {
-            if (bestMatch.link.startsWith('http://') || bestMatch.link.startsWith('https://')) {
-                window.open(bestMatch.link, '_blank');
-            } else {
-                log(`📄 Info: ${bestMatch.link}`, 'system');
-            }
-            log(`📂 Voice: Opened "${bestMatch.name}"`, 'assistant');
-            speak(`Opened ${bestMatch.name}`);
-            return true;
-        }
-    }
-    
-    return false;
 }
 
 // ==================== EVENT LISTENERS ====================
@@ -739,7 +831,7 @@ document.addEventListener('keydown', function(e) {
         if (libraryModal && libraryModal.classList.contains('active')) {
             const searchInput = document.getElementById('searchQuery');
             if (document.activeElement === searchInput) {
-                searchDocuments();
+                applyFilters();
             }
         }
     }
