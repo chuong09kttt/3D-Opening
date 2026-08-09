@@ -595,7 +595,7 @@ function performSmartSearch(query) {
     return filtered.map(function(item) { return item.doc; });
 }
 
-// ==================== VOICE NLP PROCESSING - FIXED ====================
+// ==================== VOICE NLP PROCESSING - IMPROVED VIETNAMESE ====================
 function processFullVoiceNLP(t) {
     if (!t || t.trim().length < 2) return;
     log("👤 " + t, 'user');
@@ -609,25 +609,30 @@ function processFullVoiceNLP(t) {
         return cleaned;
     }
     
-    function findVal(keywords) {
-        for (var i = 0; i < keywords.length; i++) {
-            var kw = keywords[i];
+    function extractNumber(text, keywords) {
+        if (!Array.isArray(keywords)) keywords = [keywords];
+        for (var k = 0; k < keywords.length; k++) {
+            var kw = keywords[k];
             var patterns = [
-                new RegExp('\\b' + kw + '\\b(?:\\s+is|\\s+of|\\s*[:=]|\\s+)?\\s*(-?\\d+(?:[.,]\\d+)?)', "i"),
-                new RegExp('\\b' + kw + '\\s*(-?\\d+(?:[.,]\\d+)?)', "i"),
-                new RegExp('(-?\\d+(?:[.,]\\d+)?)\\s*' + kw, "i")
+                new RegExp(kw + '\\s*(?:là|:)?\\s*([\\d.,]+)', 'i'),
+                new RegExp(kw + '\\s+([\\d.,]+)', 'i'),
+                new RegExp('([\\d.,]+)\\s*' + kw, 'i'),
+                new RegExp(kw + '\\s*[:=]\\s*([\\d.,]+)', 'i')
             ];
-            for (var j = 0; j < patterns.length; j++) {
-                var match = str.match(patterns[j]);
-                if (match) return cleanNumberString(match[1] || match[2]);
+            for (var i = 0; i < patterns.length; i++) {
+                var match = text.match(patterns[i]);
+                if (match) {
+                    var num = match[1] || match[2];
+                    if (num) return cleanNumberString(num);
+                }
             }
         }
         return null;
     }
-
+    
     // Xử lý tìm kiếm trong Library
-    if (str.match(/search\s+(?:for\s+)?(.+)/i)) {
-        var searchQuery = str.replace(/search\s+(?:for\s+)?/i, '').trim();
+    if (str.match(/search\s+(?:for\s+)?(.+)/i) || str.match(/tìm\s+(?:kiếm\s+)?(.+)/i)) {
+        var searchQuery = str.replace(/search\s+(?:for\s+)?/i, '').replace(/tìm\s+(?:kiếm\s+)?/i, '').trim();
         if (searchQuery && searchQuery.length > 1) {
             document.getElementById('searchQuery').value = searchQuery;
             var results = performSmartSearch(searchQuery);
@@ -649,62 +654,136 @@ function processFullVoiceNLP(t) {
     }
 
     // Xử lý lưu file
-    if (str.match(/save\s*(?:file|document)?/i) || str.match(/export\s*file/i)) { 
+    if (str.match(/save\s*(?:file|document)?/i) || str.match(/export\s*file/i) || str.match(/lưu\s*(?:file|tài liệu)?/i)) { 
         autoSaveDialog(); 
         return; 
     }
 
-    // PHÂN BIỆT RÕ CÁC THÔNG SỐ
+    // ===== PHÂN BIỆT RÕ CÁC THÔNG SỐ =====
     var len = null, wid = null, hei = null;
     
-    // Tìm Length - chỉ nhận khi có từ khóa "length" hoặc "dài"
-    if (str.match(/length\s+(\d+)/i) || str.match(/dài\s+(\d+)/i)) {
-        len = findVal(["length", "dài"]);
+    // KIỂM TRA TỪ KHÓA "ĐỘ DÀY" - ƯU TIÊN CAO NHẤT
+    if (str.includes('độ dày') || str.includes('độ dày là')) {
+        var val = extractNumber(str, ['độ dày', 'độ dày là']);
+        if (val !== null) {
+            hei = val;
+            log("🔍 Phát hiện 'độ dày' → Thickness", 'system');
+        }
     }
     
-    // Tìm Width - chỉ nhận khi có từ khóa "width" hoặc "rộng"
-    if (str.match(/width\s+(\d+)/i) || str.match(/rộng\s+(\d+)/i)) {
-        wid = findVal(["width", "rộng"]);
+    // KIỂM TRA TỪ KHÓA "ĐỘ DÀI" - CHỈ KHI KHÔNG CÓ "ĐỘ DÀY"
+    if (len === null && (str.includes('độ dài') || str.includes('độ dài là'))) {
+        var val = extractNumber(str, ['độ dài', 'độ dài là']);
+        if (val !== null) {
+            len = val;
+            log("🔍 Phát hiện 'độ dài' → Length", 'system');
+        }
     }
     
-    // Tìm Thickness/Height - chỉ nhận khi có từ khóa "thickness", "height", "dày" hoặc "cao"
-    if (str.match(/thickness\s+(\d+)/i) || str.match(/height\s+(\d+)/i) || str.match(/dày\s+(\d+)/i) || str.match(/cao\s+(\d+)/i)) {
-        hei = findVal(["thickness", "height", "dày", "cao"]);
+    // 1. Tìm CHIỀU DÀI (Length)
+    if (len === null) {
+        var lenKeywords = ['chiều dài', 'chiều dài là', 'length', 'dài'];
+        var val = extractNumber(str, lenKeywords);
+        if (val !== null) { len = val; }
     }
     
-    // Nếu không tìm thấy với từ khóa cụ thể, thử tìm theo thứ tự
-    if (len === null) len = findVal(["length", "dài"]);
-    if (wid === null) wid = findVal(["width", "rộng"]);
-    if (hei === null) hei = findVal(["thickness", "height", "dày", "cao"]);
+    // 2. Tìm CHIỀU RỘNG (Width)
+    if (wid === null) {
+        var widKeywords = ['chiều rộng', 'chiều rộng là', 'width', 'rộng'];
+        var val = extractNumber(str, widKeywords);
+        if (val !== null) { wid = val; }
+    }
     
-    if (len !== null) { document.getElementById("dx").value = len; updatedCount++; }
-    if (wid !== null) { document.getElementById("dy").value = wid; updatedCount++; }
-    if (hei !== null) { document.getElementById("dz").value = hei; updatedCount++; }
+    // 3. Tìm ĐỘ DÀY (Thickness) - CHỈ TÌM NẾU CHƯA CÓ
+    if (hei === null) {
+        var heiKeywords = ['độ dày', 'độ dày là', 'thickness', 'dày', 'chiều cao', 'height', 'cao'];
+        var val = extractNumber(str, heiKeywords);
+        if (val !== null) { hei = val; }
+    }
+    
+    // Cập nhật giá trị
+    if (len !== null) { 
+        document.getElementById("dx").value = len; 
+        updatedCount++; 
+        log("📏 Chiều dài: " + len + "mm", 'system');
+    }
+    if (wid !== null) { 
+        document.getElementById("dy").value = wid; 
+        updatedCount++; 
+        log("📐 Chiều rộng: " + wid + "mm", 'system');
+    }
+    if (hei !== null) { 
+        document.getElementById("dz").value = hei; 
+        updatedCount++; 
+        log("📏 Độ dày: " + hei + "mm", 'system');
+    }
 
-    // Xử lý Position
-    var posX = findVal(["position x", "pos x", "x position", "x"]);
-    var posY = findVal(["position y", "pos y", "y position", "y"]);
-    var posZ = findVal(["position z", "pos z", "z position", "z"]);
+    // ===== XỬ LÝ POSITION =====
+    var posX = null, posY = null, posZ = null;
+    
+    var posKeywordsX = ['vị trí x', 'position x', 'pos x', 'x =', 'x là', 'x='];
+    var valX = extractNumber(str, posKeywordsX);
+    if (valX !== null) { posX = valX; }
+    
+    var posKeywordsY = ['vị trí y', 'position y', 'pos y', 'y =', 'y là', 'y='];
+    var valY = extractNumber(str, posKeywordsY);
+    if (valY !== null) { posY = valY; }
+    
+    var posKeywordsZ = ['vị trí z', 'position z', 'pos z', 'z =', 'z là', 'z='];
+    var valZ = extractNumber(str, posKeywordsZ);
+    if (valZ !== null) { posZ = valZ; }
 
-    if (posX !== null) { document.getElementById("px").value = posX; updatedCount++; }
-    if (posY !== null) { document.getElementById("py").value = posY; updatedCount++; }
-    if (posZ !== null) { document.getElementById("pz").value = posZ; updatedCount++; }
+    if (posX !== null) { 
+        document.getElementById("px").value = posX; 
+        updatedCount++; 
+        log("📍 Vị trí X: " + posX + "mm", 'system');
+    }
+    if (posY !== null) { 
+        document.getElementById("py").value = posY; 
+        updatedCount++; 
+        log("📍 Vị trí Y: " + posY + "mm", 'system');
+    }
+    if (posZ !== null) { 
+        document.getElementById("pz").value = posZ; 
+        updatedCount++; 
+        log("📍 Vị trí Z: " + posZ + "mm", 'system');
+    }
 
-    // Xử lý Corner Radius
-    var radAll = findVal(["corner radius", "radius"]);
+    // ===== XỬ LÝ CORNER RADIUS =====
+    var radAll = null;
+    var radKeywords = ['corner radius', 'radius', 'bán kính', 'bo góc'];
+    var valRad = extractNumber(str, radKeywords);
+    if (valRad !== null) { 
+        radAll = valRad;
+    }
+    
     if (radAll !== null) { 
         document.getElementById("r1").value = radAll; 
         document.getElementById("r2").value = radAll; 
         document.getElementById("r3").value = radAll; 
         document.getElementById("r4").value = radAll; 
         updatedCount++; 
+        log("⭕ Corner radius: " + radAll + "mm", 'system');
     }
 
-    // Xử lý Orientation
-    if (str.match(/orientation\s*x/i) || str.match(/axis\s*x/i) || str.match(/trục\s*x/i)) { setOri('X'); updatedCount++; }
-    else if (str.match(/orientation\s*y/i) || str.match(/axis\s*y/i) || str.match(/trục\s*y/i)) { setOri('Y'); updatedCount++; }
-    else if (str.match(/orientation\s*z/i) || str.match(/axis\s*z/i) || str.match(/trục\s*z/i)) { setOri('Z'); updatedCount++; }
+    // ===== XỬ LÝ ORIENTATION =====
+    if (str.match(/orientation\s*x/i) || str.match(/axis\s*x/i) || str.match(/trục\s*x/i)) { 
+        setOri('X'); 
+        updatedCount++; 
+        log("🔄 Orientation: X", 'system');
+    }
+    else if (str.match(/orientation\s*y/i) || str.match(/axis\s*y/i) || str.match(/trục\s*y/i)) { 
+        setOri('Y'); 
+        updatedCount++; 
+        log("🔄 Orientation: Y", 'system');
+    }
+    else if (str.match(/orientation\s*z/i) || str.match(/axis\s*z/i) || str.match(/trục\s*z/i)) { 
+        setOri('Z'); 
+        updatedCount++; 
+        log("🔄 Orientation: Z", 'system');
+    }
 
+    // ===== THÔNG BÁO KẾT QUẢ =====
     if (updatedCount > 0) { 
         draw(); 
         var msg = "✅ Đã cập nhật " + updatedCount + " thông số!";
@@ -712,13 +791,17 @@ function processFullVoiceNLP(t) {
         speak(msg);
         autoSaveDialog(); 
     } else { 
-        var msg = "⚠️ Không nhận diện được thông số. Vui lòng nói rõ: Length, Width, Thickness";
+        var msg = "⚠️ Không nhận diện được thông số. Vui lòng nói rõ:\n" +
+                  "- Chiều dài: [số]\n" +
+                  "- Chiều rộng: [số]\n" +
+                  "- Độ dày: [số]\n" +
+                  "- Vị trí X/Y/Z: [số]";
         log(msg, 'assistant');
-        speak(msg);
+        speak("Không nhận diện được thông số. Vui lòng thử lại.");
     }
 }
 
-// ==================== VOICE RECOGNITION - FIXED ====================
+// ==================== VOICE RECOGNITION - IMPROVED ====================
 function initVoice() {
     var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) { 
@@ -730,7 +813,7 @@ function initVoice() {
     r.lang = "vi-VN"; 
     r.continuous = true; 
     r.interimResults = true;
-    r.maxAlternatives = 1;
+    r.maxAlternatives = 3; // Tăng số lượng kết quả dự phòng
     
     r.onstart = function() {
         isListening = true;
@@ -764,9 +847,6 @@ function initVoice() {
                             recognition.start();
                         } catch(e) {
                             console.log('Restart attempt failed:', e);
-                            if (recognitionRestartAttempts < MAX_RESTART_ATTEMPTS) {
-                                setTimeout(arguments.callee, 500);
-                            }
                         }
                     }
                 }, 300);
@@ -812,7 +892,20 @@ function initVoice() {
         
         var finalText = '', interimText = '';
         for (var i = e.resultIndex; i < e.results.length; i++) {
+            // Lấy kết quả tốt nhất
             var transcript = e.results[i][0].transcript.trim();
+            // Kiểm tra nếu có kết quả dự phòng tốt hơn
+            if (e.results[i].length > 1) {
+                for (var j = 1; j < e.results[i].length; j++) {
+                    var alt = e.results[i][j].transcript.trim();
+                    // Ưu tiên kết quả có dấu tiếng Việt
+                    if (/[áàảãạăắằẳẵặâấầẩẫậđéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵ]/i.test(alt)) {
+                        transcript = alt;
+                        break;
+                    }
+                }
+            }
+            
             if (e.results[i].isFinal) {
                 finalText += transcript + ' ';
             } else {
@@ -919,7 +1012,7 @@ function stopVoice() {
     log("🔇 Stopped listening", 'system');
 }
 
-// ==================== LIBRARY VOICE SEARCH - FIXED ====================
+// ==================== LIBRARY VOICE SEARCH ====================
 function voiceSearchLibrary() {
     if (isLibraryVoiceListening) {
         stopLibraryVoice();
@@ -938,7 +1031,7 @@ function voiceSearchLibrary() {
         libraryVoiceRecognition.lang = "vi-VN";
         libraryVoiceRecognition.continuous = false;
         libraryVoiceRecognition.interimResults = true;
-        libraryVoiceRecognition.maxAlternatives = 1;
+        libraryVoiceRecognition.maxAlternatives = 3;
         
         libraryVoiceRecognition.onstart = function() {
             isLibraryVoiceListening = true;
@@ -991,6 +1084,17 @@ function voiceSearchLibrary() {
             
             for (var i = e.resultIndex; i < e.results.length; i++) {
                 var text = e.results[i][0].transcript;
+                // Kiểm tra kết quả dự phòng tốt hơn
+                if (e.results[i].length > 1) {
+                    for (var j = 1; j < e.results[i].length; j++) {
+                        var alt = e.results[i][j].transcript.trim();
+                        if (/[áàảãạăắằẳẵặâấầẩẫậđéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵ]/i.test(alt)) {
+                            text = alt;
+                            isVietnamese = true;
+                            break;
+                        }
+                    }
+                }
                 transcript += text;
                 
                 if (/[áàảãạăắằẳẵặâấầẩẫậđéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵ]/i.test(text)) {
@@ -1402,8 +1506,8 @@ function speak(t) {
     window.speechSynthesis.cancel(); 
     var u = new SpeechSynthesisUtterance(t);
     u.lang = "vi-VN"; 
-    u.rate = 0.95; 
-    u.pitch = 1.05; 
+    u.rate = 0.9; 
+    u.pitch = 1.0; 
     u.volume = 1;
     isSpeaking = true; 
     u.onend = function() { isSpeaking = false; }; 
