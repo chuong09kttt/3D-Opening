@@ -585,10 +585,7 @@ input[type=number] { -moz-appearance: textfield !important; }
     .btn .btn-icon { font-size: 12px; }
 }
 
-/* ================================================================= */
-// === ADDED FOR CONNECTION ERROR HANDLING ===
-/* ================================================================= */
-
+/* ==================== CONNECTION ERROR HANDLING ==================== */
 .error-state {
     display: flex;
     flex-direction: column;
