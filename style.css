@@ -672,3 +672,30 @@ input[type=number] { -moz-appearance: textfield !important; }
 .my-3 { margin-top: 15px; margin-bottom: 15px; }
 .mt-2 { margin-top: 10px; }
 .mb-2 { margin-bottom: 10px; }
+/* ==================== SELECT DROPDOWN ==================== */
+select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='rgba(255,255,255,0.3)'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 10px 6px;
+    padding-right: 30px !important;
+    cursor: pointer;
+}
+
+select:hover {
+    border-color: rgba(255,255,255,0.15) !important;
+}
+
+select:focus {
+    border-color: #6c5ce7 !important;
+    box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.2) !important;
+}
+
+select option {
+    background: #1a2744;
+    color: #fff;
+    padding: 8px;
+}
