@@ -396,6 +396,118 @@ input[type=number] { -moz-appearance: textfield !important; }
     transform: translateY(-1px);
 }
 
+/* ==================== LIBRARY CATEGORY ITEMS ==================== */
+.category-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    color: rgba(255,255,255,0.6);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+.category-item:hover {
+    background: rgba(255,255,255,0.05);
+    color: rgba(255,255,255,0.9);
+}
+.category-item.active {
+    background: rgba(108, 92, 231, 0.15);
+    color: #a29bfe;
+    border-left: 2px solid #6c5ce7;
+}
+.category-item .cat-count {
+    margin-left: auto;
+    background: rgba(255,255,255,0.06);
+    padding: 0 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.4);
+}
+.category-item.active .cat-count {
+    background: rgba(108, 92, 231, 0.2);
+    color: #a29bfe;
+}
+
+/* ==================== LIBRARY DOCUMENT ITEMS ==================== */
+.doc-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: rgba(255,255,255,0.02);
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.04);
+    margin-bottom: 6px;
+    transition: all 0.2s ease;
+}
+.doc-item:hover {
+    background: rgba(255,255,255,0.05);
+    border-color: rgba(255,255,255,0.08);
+}
+.doc-item .doc-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+}
+.doc-item .doc-info {
+    flex: 1;
+    min-width: 0;
+}
+.doc-item .doc-name {
+    font-weight: 600;
+    color: #fff;
+    font-size: 14px;
+}
+.doc-item .doc-meta {
+    font-size: 11px;
+    color: rgba(255,255,255,0.4);
+    margin-top: 2px;
+}
+.doc-item .doc-tags {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    margin-top: 3px;
+}
+.doc-item .doc-tag {
+    background: rgba(108,92,231,0.15);
+    color: #a29bfe;
+    padding: 1px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+}
+.doc-item .doc-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+.doc-item .doc-actions button {
+    padding: 0 12px;
+    height: 28px;
+    border: none;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.doc-item .doc-actions .btn-open {
+    background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+    color: #fff;
+}
+.doc-item .doc-actions .btn-open:hover {
+    transform: scale(1.05);
+}
+.doc-item .doc-actions .btn-delete {
+    background: rgba(255,0,0,0.15);
+    color: #ff7675;
+}
+.doc-item .doc-actions .btn-delete:hover {
+    background: rgba(255,0,0,0.25);
+}
+
 /* ==================== RESPONSIVE ==================== */
 @media (max-width: 768px) {
     body { padding: 8px; }
@@ -438,6 +550,26 @@ input[type=number] { -moz-appearance: textfield !important; }
     }
     
     .modal { max-height: 95vh; border-radius: 14px; }
+    
+    /* Library responsive */
+    .modal-body > div[style*="display: flex"] {
+        flex-direction: column;
+    }
+    .modal-body > div[style*="display: flex"] > div:first-child {
+        flex: none !important;
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px 20px;
+    }
+    .modal-body > div[style*="display: flex"] > div:first-child > div {
+        flex: 1;
+        min-width: 120px;
+    }
+    .category-item {
+        font-size: 12px;
+        padding: 4px 8px;
+    }
 }
 
 @media (max-width: 480px) {
@@ -454,10 +586,9 @@ input[type=number] { -moz-appearance: textfield !important; }
 }
 
 /* ================================================================= */
-// === ADDED FOR CONNECTION ERROR HANDLING (Dựa trên ảnh lỗi của bạn) ===
+// === ADDED FOR CONNECTION ERROR HANDLING ===
 /* ================================================================= */
 
-/* 1. Error state cho các phần tử bị lỗi kết nối hoặc rỗng */
 .error-state {
     display: flex;
     flex-direction: column;
@@ -471,7 +602,7 @@ input[type=number] { -moz-appearance: textfield !important; }
 .error-state .error-icon {
     font-size: 36px;
     margin-bottom: 12px;
-    color: #ff7675; /* Màu đỏ cảnh báo */
+    color: #ff7675;
 }
 
 .error-state .error-title {
@@ -486,7 +617,6 @@ input[type=number] { -moz-appearance: textfield !important; }
     color: rgba(255, 255, 255, 0.5);
 }
 
-/* 2. Connection Error Box trong Library Modal (đúng với ảnh) */
 .connection-error-box {
     display: flex;
     flex-direction: column;
@@ -494,7 +624,7 @@ input[type=number] { -moz-appearance: textfield !important; }
     justify-content: center;
     padding: 40px 20px;
     text-align: center;
-    color: #e74c3c; /* Màu đỏ */
+    color: #e74c3c;
     background: rgba(231, 76, 60, 0.05);
     border-radius: 12px;
     border: 1px solid rgba(231, 76, 60, 0.15);
@@ -518,7 +648,6 @@ input[type=number] { -moz-appearance: textfield !important; }
     font-size: 13px;
 }
 
-/* 3. Loading Spinner (Khi đang tìm nạp dữ liệu thay vì báo lỗi ngay) */
 .spinner-container {
     display: flex;
     justify-content: center;
@@ -539,7 +668,6 @@ input[type=number] { -moz-appearance: textfield !important; }
     to { transform: rotate(360deg); }
 }
 
-/* 4. Các class tiện ích chung cho thông báo */
 .text-danger { color: #ff7675 !important; }
 .text-warning { color: #fdcb6e !important; }
 .text-muted { color: rgba(255,255,255,0.4) !important; }
