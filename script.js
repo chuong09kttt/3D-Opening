@@ -595,7 +595,7 @@ function performSmartSearch(query) {
     return filtered.map(function(item) { return item.doc; });
 }
 
-// ==================== VOICE NLP PROCESSING - IMPROVED VIETNAMESE ====================
+// ==================== VOICE NLP PROCESSING - 3 LỚP ====================
 function processFullVoiceNLP(t) {
     if (!t || t.trim().length < 2) return;
     log("👤 " + t, 'user');
@@ -609,6 +609,7 @@ function processFullVoiceNLP(t) {
         return cleaned;
     }
     
+    // Lớp 1: Trích xuất số với từ khóa
     function extractNumber(text, keywords) {
         if (!Array.isArray(keywords)) keywords = [keywords];
         for (var k = 0; k < keywords.length; k++) {
@@ -630,7 +631,102 @@ function processFullVoiceNLP(t) {
         return null;
     }
     
-    // Xử lý tìm kiếm trong Library
+    // Lớp 2: Chuẩn hóa và phát hiện từ khóa với ngữ cảnh
+    function detectDimension(text) {
+        var result = { length: null, width: null, thickness: null };
+        
+        // Ưu tiên 1: Phát hiện "độ dày" - QUAN TRỌNG NHẤT
+        if (text.includes('độ dày') || text.includes('độ dày là')) {
+            var val = extractNumber(text, ['độ dày', 'độ dày là']);
+            if (val !== null) {
+                result.thickness = val;
+                log("🔍 Lớp 2: Phát hiện 'độ dày' → Thickness = " + val, 'system');
+            }
+        }
+        
+        // Ưu tiên 2: Phát hiện "độ dài" - CHỈ KHI KHÔNG CÓ "độ dày"
+        if (!text.includes('độ dày') && (text.includes('độ dài') || text.includes('độ dài là'))) {
+            var val = extractNumber(text, ['độ dài', 'độ dài là']);
+            if (val !== null) {
+                result.length = val;
+                log("🔍 Lớp 2: Phát hiện 'độ dài' → Length = " + val, 'system');
+            }
+        }
+        
+        // Ưu tiên 3: "chiều dài"
+        if (result.length === null && (text.includes('chiều dài') || text.includes('chiều dài là'))) {
+            var val = extractNumber(text, ['chiều dài', 'chiều dài là']);
+            if (val !== null) {
+                result.length = val;
+                log("🔍 Lớp 2: Phát hiện 'chiều dài' → Length = " + val, 'system');
+            }
+        }
+        
+        // Ưu tiên 4: "chiều rộng"
+        if (result.width === null && (text.includes('chiều rộng') || text.includes('chiều rộng là'))) {
+            var val = extractNumber(text, ['chiều rộng', 'chiều rộng là']);
+            if (val !== null) {
+                result.width = val;
+                log("🔍 Lớp 2: Phát hiện 'chiều rộng' → Width = " + val, 'system');
+            }
+        }
+        
+        // Ưu tiên 5: Tìm "dài" nếu chưa có
+        if (result.length === null) {
+            var val = extractNumber(text, ['dài', 'length']);
+            if (val !== null) {
+                result.length = val;
+                log("🔍 Lớp 2: Phát hiện 'dài' → Length = " + val, 'system');
+            }
+        }
+        
+        // Ưu tiên 6: Tìm "rộng" nếu chưa có
+        if (result.width === null) {
+            var val = extractNumber(text, ['rộng', 'width']);
+            if (val !== null) {
+                result.width = val;
+                log("🔍 Lớp 2: Phát hiện 'rộng' → Width = " + val, 'system');
+            }
+        }
+        
+        // Ưu tiên 7: Tìm "dày" nếu chưa có
+        if (result.thickness === null) {
+            var val = extractNumber(text, ['dày', 'thickness', 'height', 'cao', 'chiều cao']);
+            if (val !== null) {
+                result.thickness = val;
+                log("🔍 Lớp 2: Phát hiện 'dày' → Thickness = " + val, 'system');
+            }
+        }
+        
+        return result;
+    }
+    
+    // Lớp 3: Xác định theo ngữ cảnh (Context)
+    function applyContext(dim, text) {
+        // Nếu có cả 3 thông số, không cần xử lý thêm
+        if (dim.length !== null && dim.width !== null && dim.thickness !== null) {
+            return dim;
+        }
+        
+        // Nếu chỉ có 2 thông số, thử suy luận thông số còn lại
+        var numbers = text.match(/\b\d+[.,]?\d*\b/g);
+        if (numbers && numbers.length > 0) {
+            var numValues = numbers.map(function(n) { return parseFloat(n.replace(',', '.')); });
+            
+            // Nếu thiếu length và có số lớn nhất
+            if (dim.length === null && numValues.length > 0) {
+                var maxVal = Math.max.apply(null, numValues);
+                if (dim.width !== maxVal && dim.thickness !== maxVal) {
+                    dim.length = maxVal;
+                    log("🔍 Lớp 3: Suy luận Length = " + maxVal + " (số lớn nhất)", 'system');
+                }
+            }
+        }
+        
+        return dim;
+    }
+    
+    // ===== XỬ LÝ TÌM KIẾM TRONG LIBRARY =====
     if (str.match(/search\s+(?:for\s+)?(.+)/i) || str.match(/tìm\s+(?:kiếm\s+)?(.+)/i)) {
         var searchQuery = str.replace(/search\s+(?:for\s+)?/i, '').replace(/tìm\s+(?:kiếm\s+)?/i, '').trim();
         if (searchQuery && searchQuery.length > 1) {
@@ -653,53 +749,19 @@ function processFullVoiceNLP(t) {
         return;
     }
 
-    // Xử lý lưu file
+    // ===== XỬ LÝ LƯU FILE =====
     if (str.match(/save\s*(?:file|document)?/i) || str.match(/export\s*file/i) || str.match(/lưu\s*(?:file|tài liệu)?/i)) { 
         autoSaveDialog(); 
         return; 
     }
 
-    // ===== PHÂN BIỆT RÕ CÁC THÔNG SỐ =====
-    var len = null, wid = null, hei = null;
+    // ===== LỚP 1 + 2 + 3: XỬ LÝ THÔNG SỐ =====
+    var dim = detectDimension(str);
+    dim = applyContext(dim, str);
     
-    // KIỂM TRA TỪ KHÓA "ĐỘ DÀY" - ƯU TIÊN CAO NHẤT
-    if (str.includes('độ dày') || str.includes('độ dày là')) {
-        var val = extractNumber(str, ['độ dày', 'độ dày là']);
-        if (val !== null) {
-            hei = val;
-            log("🔍 Phát hiện 'độ dày' → Thickness", 'system');
-        }
-    }
-    
-    // KIỂM TRA TỪ KHÓA "ĐỘ DÀI" - CHỈ KHI KHÔNG CÓ "ĐỘ DÀY"
-    if (len === null && (str.includes('độ dài') || str.includes('độ dài là'))) {
-        var val = extractNumber(str, ['độ dài', 'độ dài là']);
-        if (val !== null) {
-            len = val;
-            log("🔍 Phát hiện 'độ dài' → Length", 'system');
-        }
-    }
-    
-    // 1. Tìm CHIỀU DÀI (Length)
-    if (len === null) {
-        var lenKeywords = ['chiều dài', 'chiều dài là', 'length', 'dài'];
-        var val = extractNumber(str, lenKeywords);
-        if (val !== null) { len = val; }
-    }
-    
-    // 2. Tìm CHIỀU RỘNG (Width)
-    if (wid === null) {
-        var widKeywords = ['chiều rộng', 'chiều rộng là', 'width', 'rộng'];
-        var val = extractNumber(str, widKeywords);
-        if (val !== null) { wid = val; }
-    }
-    
-    // 3. Tìm ĐỘ DÀY (Thickness) - CHỈ TÌM NẾU CHƯA CÓ
-    if (hei === null) {
-        var heiKeywords = ['độ dày', 'độ dày là', 'thickness', 'dày', 'chiều cao', 'height', 'cao'];
-        var val = extractNumber(str, heiKeywords);
-        if (val !== null) { hei = val; }
-    }
+    var len = dim.length;
+    var wid = dim.width;
+    var hei = dim.thickness;
     
     // Cập nhật giá trị
     if (len !== null) { 
@@ -801,7 +863,7 @@ function processFullVoiceNLP(t) {
     }
 }
 
-// ==================== VOICE RECOGNITION - IMPROVED ====================
+// ==================== VOICE RECOGNITION - maxAlternatives = 5 ====================
 function initVoice() {
     var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) { 
@@ -813,7 +875,7 @@ function initVoice() {
     r.lang = "vi-VN"; 
     r.continuous = true; 
     r.interimResults = true;
-    r.maxAlternatives = 3; // Tăng số lượng kết quả dự phòng
+    r.maxAlternatives = 5; // Tăng lên 5 để có nhiều lựa chọn
     
     r.onstart = function() {
         isListening = true;
@@ -891,25 +953,37 @@ function initVoice() {
         }
         
         var finalText = '', interimText = '';
+        
         for (var i = e.resultIndex; i < e.results.length; i++) {
-            // Lấy kết quả tốt nhất
-            var transcript = e.results[i][0].transcript.trim();
-            // Kiểm tra nếu có kết quả dự phòng tốt hơn
-            if (e.results[i].length > 1) {
-                for (var j = 1; j < e.results[i].length; j++) {
-                    var alt = e.results[i][j].transcript.trim();
-                    // Ưu tiên kết quả có dấu tiếng Việt
-                    if (/[áàảãạăắằẳẵặâấầẩẫậđéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵ]/i.test(alt)) {
-                        transcript = alt;
-                        break;
-                    }
+            // Lấy tất cả các alternatives
+            var bestTranscript = '';
+            var bestScore = -1;
+            
+            for (var j = 0; j < e.results[i].length; j++) {
+                var alt = e.results[i][j].transcript.trim();
+                var confidence = e.results[i][j].confidence || 0;
+                
+                // Ưu tiên kết quả có dấu tiếng Việt và có từ khóa "độ dày"
+                var hasVietnamese = /[áàảãạăắằẳẵặâấầẩẫậđéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵ]/i.test(alt);
+                var hasDay = alt.includes('dày') || alt.includes('độ dày');
+                var hasDai = alt.includes('dài') || alt.includes('độ dài');
+                
+                // Tăng điểm cho kết quả có "độ dày"
+                var score = confidence;
+                if (hasVietnamese) score += 0.3;
+                if (hasDay) score += 0.5; // Ưu tiên cao cho "độ dày"
+                if (hasDai && !hasDay) score += 0.1;
+                
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestTranscript = alt;
                 }
             }
             
             if (e.results[i].isFinal) {
-                finalText += transcript + ' ';
+                finalText += bestTranscript + ' ';
             } else {
-                interimText += transcript + ' ';
+                interimText += bestTranscript + ' ';
             }
         }
         
@@ -1012,7 +1086,7 @@ function stopVoice() {
     log("🔇 Stopped listening", 'system');
 }
 
-// ==================== LIBRARY VOICE SEARCH ====================
+// ==================== LIBRARY VOICE SEARCH - maxAlternatives = 5 ====================
 function voiceSearchLibrary() {
     if (isLibraryVoiceListening) {
         stopLibraryVoice();
@@ -1031,7 +1105,7 @@ function voiceSearchLibrary() {
         libraryVoiceRecognition.lang = "vi-VN";
         libraryVoiceRecognition.continuous = false;
         libraryVoiceRecognition.interimResults = true;
-        libraryVoiceRecognition.maxAlternatives = 3;
+        libraryVoiceRecognition.maxAlternatives = 5;
         
         libraryVoiceRecognition.onstart = function() {
             isLibraryVoiceListening = true;
@@ -1083,23 +1157,24 @@ function voiceSearchLibrary() {
             var isVietnamese = false;
             
             for (var i = e.resultIndex; i < e.results.length; i++) {
-                var text = e.results[i][0].transcript;
-                // Kiểm tra kết quả dự phòng tốt hơn
-                if (e.results[i].length > 1) {
-                    for (var j = 1; j < e.results[i].length; j++) {
-                        var alt = e.results[i][j].transcript.trim();
-                        if (/[áàảãạăắằẳẵặâấầẩẫậđéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵ]/i.test(alt)) {
-                            text = alt;
-                            isVietnamese = true;
-                            break;
-                        }
+                // Lấy kết quả tốt nhất
+                var bestTranscript = '';
+                var bestScore = -1;
+                
+                for (var j = 0; j < e.results[i].length; j++) {
+                    var alt = e.results[i][j].transcript.trim();
+                    var confidence = e.results[i][j].confidence || 0;
+                    var hasVietnamese = /[áàảãạăắằẳẵặâấầẩẫậđéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵ]/i.test(alt);
+                    var score = confidence + (hasVietnamese ? 0.3 : 0);
+                    
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestTranscript = alt;
+                        if (hasVietnamese) isVietnamese = true;
                     }
                 }
-                transcript += text;
                 
-                if (/[áàảãạăắằẳẵặâấầẩẫậđéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵ]/i.test(text)) {
-                    isVietnamese = true;
-                }
+                transcript += bestTranscript;
                 
                 if (e.results[i].isFinal) {
                     handleLibraryVoiceResult(transcript, isVietnamese);
