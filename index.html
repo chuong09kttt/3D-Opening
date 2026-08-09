@@ -368,7 +368,7 @@
     </div>
 </div>
 
-<!-- Library Modal - Redesigned like the image -->
+<!-- Library Modal -->
 <div class="modal-overlay" id="libraryModal">
     <div class="modal" style="max-width: 820px;">
         <div class="modal-header">
@@ -387,7 +387,7 @@
                 <button onclick="syncWithGoogleSheets()" class="btn btn-primary" style="flex: none; padding: 0 14px; height: 28px; font-size: 10px; margin-left: auto;">🔄 Refresh</button>
             </div>
 
-            <!-- Two-column layout: Sidebar + Content -->
+            <!-- Two-column layout -->
             <div style="display: flex; gap: 20px; flex-wrap: wrap;">
                 <!-- Left Sidebar -->
                 <div style="flex: 0 0 200px; min-width: 160px;">
@@ -435,13 +435,21 @@
                         </div>
                     </div>
 
-                    <!-- CÔNG CỤ -->
+                    <!-- CÔNG CỤ - Thêm địa chỉ 3D Opening Tool -->
                     <div>
                         <h4 style="color: rgba(255,255,255,0.4); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">🛠️ Công cụ</h4>
                         <div style="display: flex; flex-direction: column; gap: 3px;">
-                            <div class="category-item" onclick="filterByTool('3d')">
-                                <span>🧊</span> 3D Opening Tool <span class="cat-count" id="countTool3D">5</span>
+                            <div class="category-item" data-tool="3d" onclick="filterByTool('3d')">
+                                <span>🧊</span> 3D Opening Tool 
+                                <span class="cat-count" id="countTool3D">0</span>
                             </div>
+                            <div class="category-item" style="cursor: default; background: rgba(255,255,255,0.03); padding-left: 12px;">
+                                <span style="font-size: 10px; color: rgba(255,255,255,0.3);">📌 Địa chỉ:</span>
+                                <input id="toolAddress" type="text" placeholder="Nhập địa chỉ công cụ..." 
+                                       style="flex: 1; min-width: 100px; height: 28px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 4px; color: #fff; font-size: 11px; padding: 0 8px; outline: none; font-family: 'Inter', sans-serif;">
+                                <button onclick="saveToolAddress()" style="flex: none; padding: 0 10px; height: 28px; border: none; border-radius: 4px; background: linear-gradient(135deg, #6c5ce7, #a29bfe); color: #fff; font-size: 10px; font-weight: 600; cursor: pointer;">💾</button>
+                            </div>
+                            <div id="toolAddressDisplay" style="font-size: 11px; color: #a29bfe; padding: 4px 12px; background: rgba(108,92,231,0.05); border-radius: 4px; border: 1px solid rgba(108,92,231,0.1); display: none;"></div>
                         </div>
                     </div>
                 </div>
@@ -459,7 +467,7 @@
                         <button class="btn btn-primary" onclick="toggleAddForm()" style="flex: none; padding: 0 16px; height: 36px; font-size: 11px;">➕ Thêm</button>
                     </div>
 
-                    <!-- Add Document Form (with Category & Department) -->
+                    <!-- Add Document Form -->
                     <div id="addForm" style="display: none; background: rgba(255,255,255,0.03); border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; border: 1px solid rgba(255,255,255,0.06);">
                         <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;">
                             <input id="newDocName" type="text" placeholder="Tên tài liệu..." style="flex: 1; min-width: 120px; height: 34px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; color: #fff; font-size: 12px; padding: 0 12px; outline: none; font-family: 'Inter', sans-serif;">
@@ -467,7 +475,6 @@
                             <input id="newDocTags" type="text" placeholder="Tags (phân cách bằng dấu phẩy)..." style="flex: 1; min-width: 100px; height: 34px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; color: #fff; font-size: 12px; padding: 0 12px; outline: none; font-family: 'Inter', sans-serif;">
                         </div>
                         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                            <!-- Category Dropdown -->
                             <select id="newDocCategory" style="flex: 1; min-width: 120px; height: 34px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; color: #fff; font-size: 12px; padding: 0 12px; outline: none; font-family: 'Inter', sans-serif;">
                                 <option value="standards">📋 Tiêu chuẩn</option>
                                 <option value="procedures">📝 Quy trình</option>
@@ -475,7 +482,6 @@
                                 <option value="experience">💡 Kinh nghiệm</option>
                                 <option value="others" selected>📎 Khác</option>
                             </select>
-                            <!-- Department Dropdown -->
                             <select id="newDocDepartment" style="flex: 1; min-width: 120px; height: 34px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; color: #fff; font-size: 12px; padding: 0 12px; outline: none; font-family: 'Inter', sans-serif;">
                                 <option value="hull">🚢 Vỏ</option>
                                 <option value="piping">🔧 Ống</option>
