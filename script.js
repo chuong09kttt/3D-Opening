@@ -18,6 +18,8 @@ let deleteTargetIndex = null;
 let currentFilter = 'all';
 let currentDeptFilter = null;
 let isAddFormVisible = false;
+
+// Khai báo biến cho Library Voice
 let libraryVoiceRecognition = null;
 let isLibraryVoiceListening = false;
 
@@ -43,8 +45,8 @@ function syncWithGoogleSheets() {
             }));
             renderLibrary();
             updateCategoryCounts();
-            updateSyncStatus('success', `Loaded ${library.length} documents`);
-            log(`✅ Loaded ${library.length} documents from Google Sheets`, 'system');
+            updateSyncStatus('success', 'Loaded ' + library.length + ' documents');
+            log('✅ Loaded ' + library.length + ' documents from Google Sheets', 'system');
         } else {
             handleLibraryError('Invalid data format from server');
         }
@@ -53,7 +55,7 @@ function syncWithGoogleSheets() {
 
     const script = document.createElement('script');
     script.id = callbackName;
-    script.src = `${GOOGLE_SHEETS_DATA_URL}?action=get&callback=${encodeURIComponent(callbackName)}&t=${Date.now()}`;
+    script.src = GOOGLE_SHEETS_DATA_URL + '?action=get&callback=' + encodeURIComponent(callbackName) + '&t=' + Date.now();
     script.onerror = function() {
         handleLibraryError('Network error');
         if (document.getElementById(callbackName)) document.body.removeChild(document.getElementById(callbackName));
@@ -69,11 +71,11 @@ function handleLibraryError(errorMsg) {
     updateSyncStatus('error', 'Connection error');
     const list = document.getElementById('libraryList');
     if (list) {
-        list.innerHTML = `<div class="connection-error-box">
-            <div class="error-icon-big">📡</div>
-            <div class="main-msg">Cannot connect to Google Sheets</div>
-            <div class="sub-msg">Please check your internet connection</div>
-        </div>`;
+        list.innerHTML = '<div class="connection-error-box">' +
+            '<div class="error-icon-big">📡</div>' +
+            '<div class="main-msg">Cannot connect to Google Sheets</div>' +
+            '<div class="sub-msg">Please check your internet connection</div>' +
+        '</div>';
     }
     library = [];
 }
@@ -85,25 +87,44 @@ function updateSyncStatus(status, text) {
     if (!icon || !textEl || !statusEl) return;
     
     switch(status) {
-        case 'syncing': icon.textContent = '🔄'; textEl.textContent = text; statusEl.style.borderColor = 'rgba(0,210,255,0.3)'; statusEl.style.background = 'rgba(0,210,255,0.05)'; break;
-        case 'success': icon.textContent = '✅'; textEl.textContent = text; statusEl.style.borderColor = 'rgba(0,255,0,0.3)'; statusEl.style.background = 'rgba(0,255,0,0.05)'; break;
-        case 'error': icon.textContent = '❌'; textEl.textContent = text; statusEl.style.borderColor = 'rgba(255,0,0,0.3)'; statusEl.style.background = 'rgba(255,0,0,0.05)'; break;
-        default: icon.textContent = '✅'; textEl.textContent = text || 'Ready'; statusEl.style.borderColor = 'rgba(0,210,255,0.1)'; statusEl.style.background = 'rgba(0,210,255,0.05)';
+        case 'syncing': 
+            icon.textContent = '🔄'; 
+            textEl.textContent = text; 
+            statusEl.style.borderColor = 'rgba(0,210,255,0.3)'; 
+            statusEl.style.background = 'rgba(0,210,255,0.05)'; 
+            break;
+        case 'success': 
+            icon.textContent = '✅'; 
+            textEl.textContent = text; 
+            statusEl.style.borderColor = 'rgba(0,255,0,0.3)'; 
+            statusEl.style.background = 'rgba(0,255,0,0.05)'; 
+            break;
+        case 'error': 
+            icon.textContent = '❌'; 
+            textEl.textContent = text; 
+            statusEl.style.borderColor = 'rgba(255,0,0,0.3)'; 
+            statusEl.style.background = 'rgba(255,0,0,0.05)'; 
+            break;
+        default: 
+            icon.textContent = '✅'; 
+            textEl.textContent = text || 'Ready'; 
+            statusEl.style.borderColor = 'rgba(0,210,255,0.1)'; 
+            statusEl.style.background = 'rgba(0,210,255,0.05)';
     }
 }
 
 function updateCategoryCounts() {
-    const counts = { all: library.length, standards: 0, procedures: 0, methods: 0, experience: 0 };
-    const deptCounts = { hull: 0, piping: 0, electrical: 0, outfitting: 0, others: 0 };
+    var counts = { all: library.length, standards: 0, procedures: 0, methods: 0, experience: 0 };
+    var deptCounts = { hull: 0, piping: 0, electrical: 0, outfitting: 0, others: 0 };
     
-    library.forEach(doc => {
-        const cat = doc.category || 'others';
+    library.forEach(function(doc) {
+        var cat = doc.category || 'others';
         if (cat === 'standards' || cat === 'tiêu chuẩn') counts.standards++;
         else if (cat === 'procedures' || cat === 'quy trình') counts.procedures++;
         else if (cat === 'methods' || cat === 'phương pháp') counts.methods++;
         else if (cat === 'experience' || cat === 'kinh nghiệm') counts.experience++;
         
-        const dept = doc.department || 'others';
+        var dept = doc.department || 'others';
         if (dept === 'hull' || dept === 'vỏ') deptCounts.hull++;
         else if (dept === 'piping' || dept === 'ống') deptCounts.piping++;
         else if (dept === 'electrical' || dept === 'điện') deptCounts.electrical++;
@@ -127,69 +148,82 @@ function updateCategoryCounts() {
 function filterByCategory(category) {
     currentFilter = category;
     currentDeptFilter = null;
-    document.querySelectorAll('.category-item[data-category]').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.category-item[data-dept]').forEach(el => el.classList.remove('active'));
-    const el = document.querySelector(`.category-item[data-category="${category}"]`);
+    var catEls = document.querySelectorAll('.category-item[data-category]');
+    for (var i = 0; i < catEls.length; i++) catEls[i].classList.remove('active');
+    var deptEls = document.querySelectorAll('.category-item[data-dept]');
+    for (var j = 0; j < deptEls.length; j++) deptEls[j].classList.remove('active');
+    var el = document.querySelector('.category-item[data-category="' + category + '"]');
     if (el) el.classList.add('active');
     applyFilters();
 }
 
 function filterByDepartment(department) {
     currentDeptFilter = department;
-    document.querySelectorAll('.category-item[data-dept]').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.category-item[data-category]').forEach(el => el.classList.remove('active'));
-    const el = document.querySelector(`.category-item[data-dept="${department}"]`);
+    var deptEls = document.querySelectorAll('.category-item[data-dept]');
+    for (var i = 0; i < deptEls.length; i++) deptEls[i].classList.remove('active');
+    var catEls = document.querySelectorAll('.category-item[data-category]');
+    for (var j = 0; j < catEls.length; j++) catEls[j].classList.remove('active');
+    var el = document.querySelector('.category-item[data-dept="' + department + '"]');
     if (el) el.classList.add('active');
     applyFilters();
 }
 
 function filterByTool(tool) {
-    // Just for demo - show 3D tool count
     log('🔧 3D Opening Tool: 5 documents available', 'system');
 }
 
 function applyFilters() {
-    const query = document.getElementById('searchQuery').value.trim();
-    let filtered = [...library];
+    var query = document.getElementById('searchQuery').value.trim();
+    var filtered = library.slice();
     
     // Category filter
     if (currentFilter !== 'all') {
-        const catMap = {
+        var catMap = {
             'standards': ['standards', 'tiêu chuẩn', 'standard'],
             'procedures': ['procedures', 'quy trình', 'procedure'],
             'methods': ['methods', 'phương pháp', 'method'],
             'experience': ['experience', 'kinh nghiệm', 'experience']
         };
-        const keywords = catMap[currentFilter] || [];
-        filtered = filtered.filter(doc => {
-            const cat = (doc.category || '').toLowerCase();
-            return keywords.some(kw => cat.includes(kw));
+        var keywords = catMap[currentFilter] || [];
+        filtered = filtered.filter(function(doc) {
+            var cat = (doc.category || '').toLowerCase();
+            for (var i = 0; i < keywords.length; i++) {
+                if (cat.indexOf(keywords[i]) !== -1) return true;
+            }
+            return false;
         });
     }
     
     // Department filter
     if (currentDeptFilter) {
-        const deptMap = {
+        var deptMap = {
             'hull': ['hull', 'vỏ'],
             'piping': ['piping', 'ống'],
             'electrical': ['electrical', 'điện'],
             'outfitting': ['outfitting', 'kết cấu phụ'],
             'others': ['others', 'khác']
         };
-        const keywords = deptMap[currentDeptFilter] || [];
-        filtered = filtered.filter(doc => {
-            const dept = (doc.department || '').toLowerCase();
-            return keywords.some(kw => dept.includes(kw));
+        var deptKeywords = deptMap[currentDeptFilter] || [];
+        filtered = filtered.filter(function(doc) {
+            var dept = (doc.department || '').toLowerCase();
+            for (var i = 0; i < deptKeywords.length; i++) {
+                if (dept.indexOf(deptKeywords[i]) !== -1) return true;
+            }
+            return false;
         });
     }
     
     // Search query
     if (query) {
-        const q = query.toLowerCase();
-        filtered = filtered.filter(doc => {
-            const name = (doc.name || '').toLowerCase();
-            const tags = (doc.tags || []).map(t => t.toLowerCase());
-            return name.includes(q) || tags.some(t => t.includes(q));
+        var q = query.toLowerCase();
+        filtered = filtered.filter(function(doc) {
+            var name = (doc.name || '').toLowerCase();
+            var tags = (doc.tags || []).map(function(t) { return t.toLowerCase(); });
+            if (name.indexOf(q) !== -1) return true;
+            for (var i = 0; i < tags.length; i++) {
+                if (tags[i].indexOf(q) !== -1) return true;
+            }
+            return false;
         });
     }
     
@@ -197,8 +231,8 @@ function applyFilters() {
 }
 
 // ==================== ADD DOCUMENT ====================
-async function addDocumentToGoogleSheets(doc) {
-    const formData = new URLSearchParams();
+function addDocumentToGoogleSheets(doc) {
+    var formData = new URLSearchParams();
     formData.append('action', 'add');
     formData.append('name', doc.name);
     formData.append('link', doc.link);
@@ -206,43 +240,41 @@ async function addDocumentToGoogleSheets(doc) {
     formData.append('category', doc.category || '');
     formData.append('department', doc.department || '');
 
-    try {
-        const response = await fetch(GOOGLE_SHEETS_DATA_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: formData
-        });
+    return fetch(GOOGLE_SHEETS_DATA_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: formData
+    }).then(function() {
         return true;
-    } catch (error) {
+    }).catch(function(error) {
         console.error('Add document via Form POST error:', error);
         throw error;
-    }
+    });
 }
 
-async function addDocument() {
-    const nameInput = document.getElementById('newDocName');
-    const linkInput = document.getElementById('newDocLink');
-    const tagsInput = document.getElementById('newDocTags');
+function addDocument() {
+    var nameInput = document.getElementById('newDocName');
+    var linkInput = document.getElementById('newDocLink');
+    var tagsInput = document.getElementById('newDocTags');
     
     if (!nameInput || !linkInput || !tagsInput) return alert('⚠️ Error: Input fields not found');
     
-    const name = nameInput.value.trim();
-    const link = linkInput.value.trim();
-    const tags = tagsInput.value.trim().split(',').map(t => t.trim()).filter(t => t);
+    var name = nameInput.value.trim();
+    var link = linkInput.value.trim();
+    var tags = tagsInput.value.trim().split(',').map(function(t) { return t.trim(); }).filter(function(t) { return t; });
     
     if (!name) return alert('⚠️ Please enter document name');
     if (!link) return alert('⚠️ Please enter Drive link or description');
     
-    const exists = library.some(doc => doc.name.toLowerCase() === name.toLowerCase());
-    if (exists) return alert(`⚠️ Document "${name}" already exists in library`);
+    var exists = library.some(function(doc) { return doc.name.toLowerCase() === name.toLowerCase(); });
+    if (exists) return alert('⚠️ Document "' + name + '" already exists in library');
     
-    const newDoc = { name, link, tags, category: 'others', department: 'others' };
+    var newDoc = { name: name, link: link, tags: tags, category: 'others', department: 'others' };
     
-    try {
-        await addDocumentToGoogleSheets(newDoc);
+    addDocumentToGoogleSheets(newDoc).then(function() {
         library.push(newDoc);
         renderLibrary();
         updateCategoryCounts();
@@ -251,24 +283,24 @@ async function addDocument() {
         linkInput.value = '';
         tagsInput.value = '';
         
-        log(`📤 Document "${name}" submitted`, 'system');
-        updateSyncStatus('success', `Sent "${name}". Will auto-refresh.`);
+        log('📤 Document "' + name + '" submitted', 'system');
+        updateSyncStatus('success', 'Sent "' + name + '". Will auto-refresh.');
         
-        setTimeout(() => {
+        setTimeout(function() {
             syncWithGoogleSheets();
         }, 1500);
         
         nameInput.focus();
-    } catch (error) {
+    }).catch(function(error) {
         console.error('Add document error:', error);
         alert('❌ Failed to submit document. Check your connection.');
         log('⚠️ Failed to submit document', 'system');
-    }
+    });
 }
 
 function toggleAddForm() {
     isAddFormVisible = !isAddFormVisible;
-    const form = document.getElementById('addForm');
+    var form = document.getElementById('addForm');
     if (form) {
         form.style.display = isAddFormVisible ? 'block' : 'none';
         if (isAddFormVisible) {
@@ -280,141 +312,155 @@ function toggleAddForm() {
 // ==================== DELETE DOCUMENT ====================
 function showDeletePassword(index) {
     deleteTargetIndex = index;
-    const doc = library[index];
+    var doc = library[index];
     if (!doc) return alert('⚠️ Document not found');
     
-    const passwordModal = document.createElement('div');
+    var passwordModal = document.createElement('div');
     passwordModal.id = 'passwordModal';
-    passwordModal.style.cssText = `position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); display: flex; justify-content: center; align-items: center; z-index: 2000; animation: fadeIn 0.3s ease;`;
-    passwordModal.innerHTML = `
-        <div style="background: rgba(20,27,43,0.98); border-radius: 20px; border: 1px solid rgba(255,255,255,0.08); max-width: 400px; width: 90%; padding: 30px; box-shadow: 0 30px 60px rgba(0,0,0,0.8);">
-            <div style="text-align: center; margin-bottom: 20px;">
-                <span style="font-size: 40px;">🔒</span>
-                <h3 style="color: #fff; margin: 10px 0 5px 0; font-weight: 700;">Confirm Deletion</h3>
-                <p style="color: rgba(255,255,255,0.6); font-size: 13px;">You are deleting: <strong style="color: #ff7675;">"${doc.name}"</strong></p>
-            </div>
-            <input id="deletePasswordInput" type="password" placeholder="Enter password..." 
-                   style="width: 100%; height: 44px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 15px; padding: 0 14px; outline: none; margin-bottom: 15px;">
-            <div style="display: flex; gap: 10px;">
-                <button onclick="closePasswordModal()" style="flex: 1; height: 40px; border: none; border-radius: 10px; background: rgba(255,255,255,0.1); color: #fff; font-weight: 600; cursor: pointer;">Cancel</button>
-                <button onclick="confirmDeleteWithPassword()" style="flex: 1; height: 40px; border: none; border-radius: 10px; background: linear-gradient(135deg, #d63031, #ff7675); color: #fff; font-weight: 600; cursor: pointer;">Confirm</button>
-            </div>
-            <div id="passwordError" style="color: #ff7675; font-size: 12px; margin-top: 10px; text-align: center; display: none;">❌ Incorrect password!</div>
-        </div>
-    `;
+    passwordModal.style.cssText = 'position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); display: flex; justify-content: center; align-items: center; z-index: 2000; animation: fadeIn 0.3s ease;';
+    passwordModal.innerHTML = 
+        '<div style="background: rgba(20,27,43,0.98); border-radius: 20px; border: 1px solid rgba(255,255,255,0.08); max-width: 400px; width: 90%; padding: 30px; box-shadow: 0 30px 60px rgba(0,0,0,0.8);">' +
+            '<div style="text-align: center; margin-bottom: 20px;">' +
+                '<span style="font-size: 40px;">🔒</span>' +
+                '<h3 style="color: #fff; margin: 10px 0 5px 0; font-weight: 700;">Confirm Deletion</h3>' +
+                '<p style="color: rgba(255,255,255,0.6); font-size: 13px;">You are deleting: <strong style="color: #ff7675;">"' + doc.name + '"</strong></p>' +
+            '</div>' +
+            '<input id="deletePasswordInput" type="password" placeholder="Enter password..." ' +
+                   'style="width: 100%; height: 44px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 15px; padding: 0 14px; outline: none; margin-bottom: 15px;">' +
+            '<div style="display: flex; gap: 10px;">' +
+                '<button onclick="closePasswordModal()" style="flex: 1; height: 40px; border: none; border-radius: 10px; background: rgba(255,255,255,0.1); color: #fff; font-weight: 600; cursor: pointer;">Cancel</button>' +
+                '<button onclick="confirmDeleteWithPassword()" style="flex: 1; height: 40px; border: none; border-radius: 10px; background: linear-gradient(135deg, #d63031, #ff7675); color: #fff; font-weight: 600; cursor: pointer;">Confirm</button>' +
+            '</div>' +
+            '<div id="passwordError" style="color: #ff7675; font-size: 12px; margin-top: 10px; text-align: center; display: none;">❌ Incorrect password!</div>' +
+        '</div>';
     document.body.appendChild(passwordModal);
-    setTimeout(() => { const input = document.getElementById('deletePasswordInput'); if (input) input.focus(); }, 200);
+    setTimeout(function() { 
+        var input = document.getElementById('deletePasswordInput'); 
+        if (input) input.focus(); 
+    }, 200);
 }
 
 function closePasswordModal() {
-    const modal = document.getElementById('passwordModal');
+    var modal = document.getElementById('passwordModal');
     if (modal) modal.remove();
     deleteTargetIndex = null;
 }
 
-async function confirmDeleteWithPassword() {
-    const passwordInput = document.getElementById('deletePasswordInput');
-    const password = passwordInput ? passwordInput.value.trim() : '';
-    const errorDiv = document.getElementById('passwordError');
+function deleteDocumentFromGoogleSheets(index, password) {
+    var formData = new URLSearchParams();
+    formData.append('action', 'delete');
+    formData.append('index', index);
+    formData.append('password', password);
+
+    return fetch(GOOGLE_SHEETS_DATA_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: formData
+    }).then(function() {
+        return true;
+    }).catch(function(error) {
+        console.error('Delete document via Form POST error:', error);
+        throw error;
+    });
+}
+
+function confirmDeleteWithPassword() {
+    var passwordInput = document.getElementById('deletePasswordInput');
+    var password = passwordInput ? passwordInput.value.trim() : '';
     
     if (deleteTargetIndex !== null && deleteTargetIndex < library.length) {
-        const doc = library[deleteTargetIndex];
-        try {
-            await deleteDocumentFromGoogleSheets(deleteTargetIndex, password);
+        var doc = library[deleteTargetIndex];
+        deleteDocumentFromGoogleSheets(deleteTargetIndex, password).then(function() {
             library.splice(deleteTargetIndex, 1);
             renderLibrary();
             updateCategoryCounts();
-            log(`🗑️ Deleted: ${doc.name}`, 'system');
+            log('🗑️ Deleted: ' + doc.name, 'system');
             closePasswordModal();
-            updateSyncStatus('success', `Deleted: ${doc.name}`);
-            setTimeout(() => {
+            updateSyncStatus('success', 'Deleted: ' + doc.name);
+            setTimeout(function() {
                 syncWithGoogleSheets();
             }, 1000);
-        } catch (error) {
+        }).catch(function(error) {
             console.error('Delete error:', error);
             alert('❌ Failed to delete document from cloud.');
             closePasswordModal();
-        }
+        });
     } else {
         alert('⚠️ Error: Document not found');
         closePasswordModal();
     }
 }
 
-async function deleteDocumentFromGoogleSheets(index, password) {
-    const formData = new URLSearchParams();
-    formData.append('action', 'delete');
-    formData.append('index', index);
-    formData.append('password', password);
-
-    try {
-        const response = await fetch(GOOGLE_SHEETS_DATA_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: formData
-        });
-        return true;
-    } catch (error) {
-        console.error('Delete document via Form POST error:', error);
-        throw error;
-    }
-}
-
 // ==================== LIBRARY UI FUNCTIONS ====================
-function renderLibrary(filteredList = null) {
-    const list = document.getElementById('libraryList');
+function renderLibrary(filteredList) {
+    var list = document.getElementById('libraryList');
     if (!list) return;
-    const docs = filteredList || library;
+    var docs = filteredList || library;
     if (docs.length === 0) { 
-        list.innerHTML = `<div style="text-align: center; color: rgba(255,255,255,0.4); padding: 40px 0;">
-            <div style="font-size: 40px; margin-bottom: 10px;">📭</div>
-            <div>No documents found</div>
-        </div>`; 
+        list.innerHTML = '<div style="text-align: center; color: rgba(255,255,255,0.4); padding: 40px 0;">' +
+            '<div style="font-size: 40px; margin-bottom: 10px;">📭</div>' +
+            '<div>No documents found</div>' +
+        '</div>'; 
         return; 
     }
-    list.innerHTML = docs.map((doc, index) => {
-        const originalIndex = library.indexOf(doc);
-        const tagsHtml = doc.tags && doc.tags.length > 0 ? 
-            `<div class="doc-tags">${doc.tags.map(tag => `<span class="doc-tag">#${tag}</span>`).join('')}</div>` : '';
-        const categoryLabel = doc.category || 'Others';
-        return `<div class="doc-item">
-            <span class="doc-icon">📄</span>
-            <div class="doc-info">
-                <div class="doc-name">${doc.name}</div>
-                <div class="doc-meta">${categoryLabel}</div>
-                ${tagsHtml}
-            </div>
-            <div class="doc-actions">
-                <button class="btn-open" onclick="openDocument(${originalIndex})">📂 Open</button>
-                <button class="btn-delete" onclick="showDeletePassword(${originalIndex})">✕</button>
-            </div>
-        </div>`;
-    }).join('');
+    var html = '';
+    for (var i = 0; i < docs.length; i++) {
+        var doc = docs[i];
+        var originalIndex = library.indexOf(doc);
+        var tagsHtml = '';
+        if (doc.tags && doc.tags.length > 0) {
+            tagsHtml = '<div class="doc-tags">';
+            for (var j = 0; j < doc.tags.length; j++) {
+                tagsHtml += '<span class="doc-tag">#' + doc.tags[j] + '</span>';
+            }
+            tagsHtml += '</div>';
+        }
+        var categoryLabel = doc.category || 'Others';
+        html += '<div class="doc-item">' +
+            '<span class="doc-icon">📄</span>' +
+            '<div class="doc-info">' +
+                '<div class="doc-name">' + doc.name + '</div>' +
+                '<div class="doc-meta">' + categoryLabel + '</div>' +
+                tagsHtml +
+            '</div>' +
+            '<div class="doc-actions">' +
+                '<button class="btn-open" onclick="openDocument(' + originalIndex + ')">📂 Open</button>' +
+                '<button class="btn-delete" onclick="showDeletePassword(' + originalIndex + ')">✕</button>' +
+            '</div>' +
+        '</div>';
+    }
+    list.innerHTML = html;
 }
 
 function openDocument(index) {
-    const doc = library[index];
+    var doc = library[index];
     if (doc && doc.link) {
-        if (doc.link.startsWith('http://') || doc.link.startsWith('https://')) window.open(doc.link, '_blank');
-        else log(`📄 Info: ${doc.link}`, 'system');
-        log(`📂 Opening: ${doc.name}`, 'system');
-    } else alert('⚠️ Document not found or invalid link');
+        if (doc.link.indexOf('http://') === 0 || doc.link.indexOf('https://') === 0) {
+            window.open(doc.link, '_blank');
+        } else {
+            log('📄 Info: ' + doc.link, 'system');
+        }
+        log('📂 Opening: ' + doc.name, 'system');
+    } else {
+        alert('⚠️ Document not found or invalid link');
+    }
 }
 
 function openLibrary() {
-    const modal = document.getElementById('libraryModal');
+    var modal = document.getElementById('libraryModal');
     if (modal) {
         modal.classList.add('active');
         document.body.style.overflow = 'hidden';
         // Reset filters
         currentFilter = 'all';
         currentDeptFilter = null;
-        document.querySelectorAll('.category-item').forEach(el => el.classList.remove('active'));
-        const allEl = document.querySelector('.category-item[data-category="all"]');
-        if (allEl) allEl.classList.add('active');
+        var allEls = document.querySelectorAll('.category-item');
+        for (var i = 0; i < allEls.length; i++) allEls[i].classList.remove('active');
+        var allCat = document.querySelector('.category-item[data-category="all"]');
+        if (allCat) allCat.classList.add('active');
         document.getElementById('searchQuery').value = '';
         document.getElementById('searchResults').style.display = 'none';
         renderLibrary();
@@ -425,7 +471,7 @@ function openLibrary() {
 }
 
 function closeLibrary() {
-    const modal = document.getElementById('libraryModal');
+    var modal = document.getElementById('libraryModal');
     if (modal) {
         modal.classList.remove('active');
         document.body.style.overflow = '';
@@ -440,138 +486,221 @@ function searchDocuments() {
 }
 
 function performSmartSearch(query) {
-    const q = query.toLowerCase().trim();
-    const words = q.split(/\s+/);
-    const scored = library.map(doc => {
-        let score = 0;
-        const docName = doc.name.toLowerCase();
-        const docTags = doc.tags ? doc.tags.map(t => t.toLowerCase()) : [];
+    var q = query.toLowerCase().trim();
+    var words = q.split(/\s+/);
+    var scored = library.map(function(doc) {
+        var score = 0;
+        var docName = doc.name.toLowerCase();
+        var docTags = doc.tags ? doc.tags.map(function(t) { return t.toLowerCase(); }) : [];
         if (docName === q) score += 100;
-        if (docName.includes(q)) score += 50;
-        for (const word of words) {
-            if (docName.includes(word)) score += 20;
-            for (const tag of docTags) { if (tag.includes(word) || word.includes(tag)) score += 30; }
+        if (docName.indexOf(q) !== -1) score += 50;
+        for (var i = 0; i < words.length; i++) {
+            if (docName.indexOf(words[i]) !== -1) score += 20;
+            for (var j = 0; j < docTags.length; j++) {
+                if (docTags[j].indexOf(words[i]) !== -1 || words[i].indexOf(docTags[j]) !== -1) score += 30;
+            }
         }
-        return { doc, score };
+        return { doc: doc, score: score };
     });
-    return scored.filter(item => item.score > 0).sort((a, b) => b.score - a.score).map(item => item.doc);
+    var filtered = scored.filter(function(item) { return item.score > 0; });
+    filtered.sort(function(a, b) { return b.score - a.score; });
+    return filtered.map(function(item) { return item.doc; });
 }
 
 // ==================== VOICE NLP PROCESSING ====================
 function processFullVoiceNLP(t) {
     if (!t || t.trim().length < 2) return;
     log("👤 " + t, 'user');
-    let str = t.toLowerCase().trim();
-    let updatedCount = 0;
-    const cleanNumberString = (numStr) => {
+    var str = t.toLowerCase().trim();
+    var updatedCount = 0;
+    
+    function cleanNumberString(numStr) {
         if (!numStr) return '0';
-        let cleaned = numStr.replace(/[.,](\d{3})/g, '$1');
+        var cleaned = numStr.replace(/[.,](\d{3})/g, '$1');
         cleaned = cleaned.replace(/,/g, '.');
         return cleaned;
-    };
-    const findVal = (keywords) => {
-        for (let kw of keywords) {
-            let regex = new RegExp(`\\b${kw}\\b(?:\\s+is|\\s+of|\\s*[:=]|\\s+)?\\s*(-?\\d+(?:[.,]\\d+)?)`, "i");
-            let match = str.match(regex);
+    }
+    
+    function findVal(keywords) {
+        for (var i = 0; i < keywords.length; i++) {
+            var kw = keywords[i];
+            var regex = new RegExp('\\b' + kw + '\\b(?:\\s+is|\\s+of|\\s*[:=]|\\s+)?\\s*(-?\\d+(?:[.,]\\d+)?)', "i");
+            var match = str.match(regex);
             if (match) return cleanNumberString(match[1]);
         }
         return null;
-    };
+    }
 
     if (str.match(/search\s+(?:for\s+)?(.+)/i)) {
-        let searchQuery = str.replace(/search\s+(?:for\s+)?/i, '').trim();
+        var searchQuery = str.replace(/search\s+(?:for\s+)?/i, '').trim();
         if (searchQuery && searchQuery.length > 1) {
             document.getElementById('searchQuery').value = searchQuery;
-            const results = performSmartSearch(searchQuery);
+            var results = performSmartSearch(searchQuery);
             if (results.length > 0) { 
-                const bestMatch = results[0]; 
+                var bestMatch = results[0]; 
                 if (bestMatch.link) { 
-                    if (bestMatch.link.startsWith('http://') || bestMatch.link.startsWith('https://')) window.open(bestMatch.link, '_blank'); 
+                    if (bestMatch.link.indexOf('http://') === 0 || bestMatch.link.indexOf('https://') === 0) {
+                        window.open(bestMatch.link, '_blank'); 
+                    }
                 } 
                 searchDocuments(); 
-            } else searchDocuments();
-            const modal = document.getElementById('libraryModal');
+            } else {
+                searchDocuments();
+            }
+            var modal = document.getElementById('libraryModal');
             if (!modal.classList.contains('active')) openLibrary();
         }
         return;
     }
 
-    if (str.match(/save\s*(?:file|document)?/i) || str.match(/export\s*file/i)) { autoSaveDialog(); return; }
+    if (str.match(/save\s*(?:file|document)?/i) || str.match(/export\s*file/i)) { 
+        autoSaveDialog(); 
+        return; 
+    }
 
-    let len = findVal(["length", "dài"]);
-    let wid = findVal(["width", "rộng"]);
-    let hei = findVal(["thickness", "height", "dày", "cao"]);
+    var len = findVal(["length", "dài"]);
+    var wid = findVal(["width", "rộng"]);
+    var hei = findVal(["thickness", "height", "dày", "cao"]);
     if (len !== null) { document.getElementById("dx").value = len; updatedCount++; }
     if (wid !== null) { document.getElementById("dy").value = wid; updatedCount++; }
     if (hei !== null) { document.getElementById("dz").value = hei; updatedCount++; }
 
-    let posX = findVal(["position x", "pos x", "x position", "x"]);
-    let posY = findVal(["position y", "pos y", "y position", "y"]);
-    let posZ = findVal(["position z", "pos z", "z position", "z"]);
+    var posX = findVal(["position x", "pos x", "x position", "x"]);
+    var posY = findVal(["position y", "pos y", "y position", "y"]);
+    var posZ = findVal(["position z", "pos z", "z position", "z"]);
 
     if (posX !== null) { document.getElementById("px").value = posX; updatedCount++; }
     if (posY !== null) { document.getElementById("py").value = posY; updatedCount++; }
     if (posZ !== null) { document.getElementById("pz").value = posZ; updatedCount++; }
 
-    let radAll = findVal(["corner radius", "radius"]);
-    if (radAll !== null) { document.getElementById("r1").value = radAll; document.getElementById("r2").value = radAll; document.getElementById("r3").value = radAll; document.getElementById("r4").value = radAll; updatedCount++; }
+    var radAll = findVal(["corner radius", "radius"]);
+    if (radAll !== null) { 
+        document.getElementById("r1").value = radAll; 
+        document.getElementById("r2").value = radAll; 
+        document.getElementById("r3").value = radAll; 
+        document.getElementById("r4").value = radAll; 
+        updatedCount++; 
+    }
 
     if (str.match(/orientation\s*x/i) || str.match(/axis\s*x/i)) { setOri('X'); updatedCount++; }
     else if (str.match(/orientation\s*y/i) || str.match(/axis\s*y/i)) { setOri('Y'); updatedCount++; }
     else if (str.match(/orientation\s*z/i) || str.match(/axis\s*z/i)) { setOri('Z'); updatedCount++; }
 
-    if (updatedCount > 0) { draw(); log("✅ Parameters updated!", 'assistant'); autoSaveDialog(); }
-    else { log("⚠️ Could not recognize parameters", 'assistant'); }
+    if (updatedCount > 0) { 
+        draw(); 
+        log("✅ Parameters updated!", 'assistant'); 
+        autoSaveDialog(); 
+    } else { 
+        log("⚠️ Could not recognize parameters", 'assistant'); 
+    }
 }
 
 // ==================== VOICE RECOGNITION ====================
 function initVoice() {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) { log("❌ Browser does not support Voice", 'system'); return null; }
-    const r = new SR();
-    r.lang = "vi-VN"; r.continuous = true; r.interimResults = true;
-    r.onstart = () => {
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { 
+        log("❌ Browser does not support Voice", 'system'); 
+        return null; 
+    }
+    var r = new SR();
+    r.lang = "vi-VN"; 
+    r.continuous = true; 
+    r.interimResults = true;
+    
+    r.onstart = function() {
         isListening = true;
         document.getElementById('voiceBtn').classList.add('listening');
         document.getElementById('chatStatus').textContent = '● Listening...';
         document.getElementById('chatStatus').classList.add('waiting');
         log("🎤 Listening...", 'system');
-        partialTranscript = ''; hasAutoTriggeredSave = false;
+        partialTranscript = ''; 
+        hasAutoTriggeredSave = false;
     };
-    r.onend = () => {
-        if (isListening) { try { r.start(); } catch(e) {} } 
-        else { document.getElementById('voiceBtn').classList.remove('listening'); document.getElementById('chatStatus').textContent = '● Ready'; document.getElementById('chatStatus').classList.remove('waiting'); }
-    };
-    r.onerror = (e) => {
-        if (e.error === 'not-allowed') { log("❌ Microphone access denied", 'system'); stopVoice(); } 
-        else if (e.error !== 'no-speech') log(`⚠️ Error: ${e.error}`, 'system');
-        if (isListening && e.error !== 'not-allowed') { try { setTimeout(() => { r.start(); }, 300); } catch(e) {} }
-    };
-    r.onresult = (e) => {
-        if (silenceTimer) { clearTimeout(silenceTimer); silenceTimer = null; }
-        let finalText = '', interimText = '';
-        for (let i = e.resultIndex; i < e.results.length; i++) {
-            const transcript = e.results[i][0].transcript.trim();
-            if (e.results[i].isFinal) finalText += transcript + ' ';
-            else interimText += transcript + ' ';
+    
+    r.onend = function() {
+        if (isListening) { 
+            try { r.start(); } catch(e) {} 
+        } else { 
+            document.getElementById('voiceBtn').classList.remove('listening'); 
+            document.getElementById('chatStatus').textContent = '● Ready'; 
+            document.getElementById('chatStatus').classList.remove('waiting'); 
         }
-        if (finalText) { partialTranscript += finalText; processFullVoiceNLP(partialTranscript.trim()); partialTranscript = ''; }
-        else if (interimText) { document.getElementById('chatStatus').textContent = '● Speaking...'; partialTranscript = interimText.trim(); }
-        silenceTimer = setTimeout(() => { if (isListening && partialTranscript) { processFullVoiceNLP(partialTranscript.trim()); partialTranscript = ''; } }, 2000);
+    };
+    
+    r.onerror = function(e) {
+        if (e.error === 'not-allowed') { 
+            log("❌ Microphone access denied", 'system'); 
+            stopVoice(); 
+        } else if (e.error !== 'no-speech') {
+            log("⚠️ Error: " + e.error, 'system');
+        }
+        if (isListening && e.error !== 'not-allowed') { 
+            try { 
+                setTimeout(function() { r.start(); }, 300); 
+            } catch(e) {} 
+        }
+    };
+    
+    r.onresult = function(e) {
+        if (silenceTimer) { 
+            clearTimeout(silenceTimer); 
+            silenceTimer = null; 
+        }
+        var finalText = '', interimText = '';
+        for (var i = e.resultIndex; i < e.results.length; i++) {
+            var transcript = e.results[i][0].transcript.trim();
+            if (e.results[i].isFinal) {
+                finalText += transcript + ' ';
+            } else {
+                interimText += transcript + ' ';
+            }
+        }
+        if (finalText) { 
+            partialTranscript += finalText; 
+            processFullVoiceNLP(partialTranscript.trim()); 
+            partialTranscript = ''; 
+        } else if (interimText) { 
+            document.getElementById('chatStatus').textContent = '● Speaking...'; 
+            partialTranscript = interimText.trim(); 
+        }
+        silenceTimer = setTimeout(function() { 
+            if (isListening && partialTranscript) { 
+                processFullVoiceNLP(partialTranscript.trim()); 
+                partialTranscript = ''; 
+            } 
+        }, 2000);
     };
     return r;
 }
 
 function voice() {
-    if (isListening) { stopVoice(); return; }
-    if (!recognition) { recognition = initVoice(); if (!recognition) return; }
-    try { recognition.start(); } catch(e) { try { recognition.stop(); setTimeout(() => { recognition.start(); }, 300); } catch(e2) {} }
+    if (isListening) { 
+        stopVoice(); 
+        return; 
+    }
+    if (!recognition) { 
+        recognition = initVoice(); 
+        if (!recognition) return; 
+    }
+    try { 
+        recognition.start(); 
+    } catch(e) { 
+        try { 
+            recognition.stop(); 
+            setTimeout(function() { recognition.start(); }, 300); 
+        } catch(e2) {} 
+    }
 }
 
 function stopVoice() {
     isListening = false;
-    if (silenceTimer) { clearTimeout(silenceTimer); silenceTimer = null; }
-    if (recognition) { try { recognition.stop(); } catch(e) {} }
+    if (silenceTimer) { 
+        clearTimeout(silenceTimer); 
+        silenceTimer = null; 
+    }
+    if (recognition) { 
+        try { recognition.stop(); } catch(e) {} 
+    }
     document.getElementById('voiceBtn').classList.remove('listening');
     document.getElementById('chatStatus').textContent = '● Ready';
     document.getElementById('chatStatus').classList.remove('waiting');
@@ -582,81 +711,116 @@ function stopVoice() {
 // ==================== 3D & EXPORT FUNCTIONS ====================
 function autoSaveDialog() {
     if (hasAutoTriggeredSave) return;
-    let L = parseInputValue("dx"); let W = parseInputValue("dy"); let T = parseInputValue("dz");
+    var L = parseInputValue("dx"); 
+    var W = parseInputValue("dy"); 
+    var T = parseInputValue("dz");
     if (L > 0 && W > 0 && T > 0) {
         hasAutoTriggeredSave = true;
-        const modal = document.getElementById('saveModal');
-        if (modal) { modal.classList.add('active'); document.body.style.overflow = 'hidden'; document.getElementById('saveFileName').value = `Opening_${L}x${W}x${T}`; log("📁 Opening save dialog...", 'system'); }
+        var modal = document.getElementById('saveModal');
+        if (modal) { 
+            modal.classList.add('active'); 
+            document.body.style.overflow = 'hidden'; 
+            document.getElementById('saveFileName').value = 'Opening_' + L + 'x' + W + 'x' + T; 
+            log("📁 Opening save dialog...", 'system'); 
+        }
     }
 }
 
-function saveFile() { autoSaveDialog(); }
-
-function closeSaveDialog() {
-    const modal = document.getElementById('saveModal');
-    if (modal) { modal.classList.remove('active'); document.body.style.overflow = ''; hasAutoTriggeredSave = false; }
+function saveFile() { 
+    autoSaveDialog(); 
 }
 
-function confirmSave() { const fileName = document.getElementById('saveFileName').value.trim() || "Opening"; generateAndDownloadFile(fileName); closeSaveDialog(); }
+function closeSaveDialog() {
+    var modal = document.getElementById('saveModal');
+    if (modal) { 
+        modal.classList.remove('active'); 
+        document.body.style.overflow = ''; 
+        hasAutoTriggeredSave = false; 
+    }
+}
+
+function confirmSave() { 
+    var fileName = document.getElementById('saveFileName').value.trim() || "Opening"; 
+    generateAndDownloadFile(fileName); 
+    closeSaveDialog(); 
+}
 
 function generateAndDownloadFile(fileName) {
-    let px = parseInputValue("px"); let py = parseInputValue("py"); let pz = parseInputValue("pz");
-    let L = parseInputValue("dx"); let W = parseInputValue("dy"); let H = parseInputValue("dz");
-    let r1 = parseInputValue("r1"); let r2 = parseInputValue("r2"); let r3 = parseInputValue("r3"); let r4 = parseInputValue("r4");
-    let oriStr = "ORI Y is Y and Z is Z";
+    var px = parseInputValue("px"); 
+    var py = parseInputValue("py"); 
+    var pz = parseInputValue("pz");
+    var L = parseInputValue("dx"); 
+    var W = parseInputValue("dy"); 
+    var H = parseInputValue("dz");
+    var r1 = parseInputValue("r1"); 
+    var r2 = parseInputValue("r2"); 
+    var r3 = parseInputValue("r3"); 
+    var r4 = parseInputValue("r4");
+    var oriStr = "ORI Y is Y and Z is Z";
     if (ORI === "X") oriStr = "ORI Y is -Z and Z is X"; 
     else if (ORI === "Y") oriStr = "ORI Y is -X and Z is Y";
 
-    let data = `NEW EQUIPMENT
-USRCOG ( X ( 0 ) Y ( 0 ) Z ( 0 ) )
-USRWCO ( X ( 0 ) Y ( 0 ) Z ( 0 ) )
-POS X ${px}mm Y ${py}mm Z ${pz}mm
-${oriStr}
-BUIL false
-DSCO unset
-PTSP unset
-INSC unset
+    var data = 'NEW EQUIPMENT\n' +
+        'USRCOG ( X ( 0 ) Y ( 0 ) Z ( 0 ) )\n' +
+        'USRWCO ( X ( 0 ) Y ( 0 ) Z ( 0 ) )\n' +
+        'POS X ' + px + 'mm Y ' + py + 'mm Z ' + pz + 'mm\n' +
+        oriStr + '\n' +
+        'BUIL false\n' +
+        'DSCO unset\n' +
+        'PTSP unset\n' +
+        'INSC unset\n' +
+        '\n' +
+        'NEW EXTRUSION\n' +
+        oriStr + '\n' +
+        'LEVE 0 2\n' +
+        'HEIG ' + H + 'mm\n' +
+        '\n' +
+        'NEW LOOP\n' +
+        '\n' +
+        'NEW VERTEX\n' +
+        'FRAD ' + r1 + 'mm\n' +
+        '\n' +
+        'END\n' +
+        'NEW VERTEX\n' +
+        'POS X 0mm Y ' + W + 'mm Z 0mm\n' +
+        'FRAD ' + r2 + 'mm\n' +
+        '\n' +
+        'END\n' +
+        'NEW VERTEX\n' +
+        'POS X ' + L + 'mm Y ' + W + 'mm Z 0mm\n' +
+        'FRAD ' + r3 + 'mm\n' +
+        '\n' +
+        'END\n' +
+        'NEW VERTEX\n' +
+        'POS X ' + L + 'mm Y 0mm Z 0mm\n' +
+        'FRAD ' + r4 + 'mm\n' +
+        '\n' +
+        'END\n' +
+        'END\n' +
+        'END\n' +
+        'END';
 
-NEW EXTRUSION
-${oriStr}
-LEVE 0 2
-HEIG ${H}mm
-
-NEW LOOP
-
-NEW VERTEX
-FRAD ${r1}mm
-
-END
-NEW VERTEX
-POS X 0mm Y ${W}mm Z 0mm
-FRAD ${r2}mm
-
-END
-NEW VERTEX
-POS X ${L}mm Y ${W}mm Z 0mm
-FRAD ${r3}mm
-
-END
-NEW VERTEX
-POS X ${L}mm Y 0mm Z 0mm
-FRAD ${r4}mm
-
-END
-END
-END
-END`;
-
-    let blob = new Blob([data], { type: "text/plain" });
-    let a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `${fileName}.mac`;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    log(`💾 Exported ${fileName}.mac successfully!`, 'system');
+    var blob = new Blob([data], { type: "text/plain" });
+    var a = document.createElement("a"); 
+    a.href = URL.createObjectURL(blob); 
+    a.download = fileName + '.mac';
+    document.body.appendChild(a); 
+    a.click(); 
+    document.body.removeChild(a);
+    log('💾 Exported ' + fileName + '.mac successfully!', 'system');
 }
 
-function setOri(o) { ORI = o; document.querySelectorAll(".ori-buttons button").forEach(b => b.classList.remove("active")); document.getElementById("o" + o.toLowerCase()).classList.add("active"); document.getElementById('oriBadge').textContent = o; draw(); }
+function setOri(o) { 
+    ORI = o; 
+    var btns = document.querySelectorAll(".ori-buttons button");
+    for (var i = 0; i < btns.length; i++) btns[i].classList.remove("active");
+    document.getElementById("o" + o.toLowerCase()).classList.add("active"); 
+    document.getElementById('oriBadge').textContent = o; 
+    draw(); 
+}
 
 function parseInputValue(id) {
-    let raw = (document.getElementById(id).value || "").toString().trim();
+    var raw = (document.getElementById(id).value || "").toString().trim();
     if (!raw) return 0;
     if (/^\d+[.,]\d{3}$/.test(raw)) raw = raw.replace(/[.,]/g, '');
     else raw = raw.replace(',', '.');
@@ -664,83 +828,226 @@ function parseInputValue(id) {
 }
 
 function draw() {
-    c.width = c.offsetWidth; c.height = c.offsetHeight || 320;
-    let L = parseInputValue("dx"); let W = parseInputValue("dy"); let T = parseInputValue("dz");
-    let posX = parseInputValue("px"); let posY = parseInputValue("py"); let posZ = parseInputValue("pz");
+    c.width = c.offsetWidth; 
+    c.height = c.offsetHeight || 320;
+    var L = parseInputValue("dx"); 
+    var W = parseInputValue("dy"); 
+    var T = parseInputValue("dz");
+    var posX = parseInputValue("px"); 
+    var posY = parseInputValue("py"); 
+    var posZ = parseInputValue("pz");
     ctx.clearRect(0, 0, c.width, c.height);
-    const grad = ctx.createLinearGradient(0, 0, c.width, c.height);
-    grad.addColorStop(0, '#0a0e17'); grad.addColorStop(1, '#141b2b');
-    ctx.fillStyle = grad; ctx.fillRect(0, 0, c.width, c.height);
+    var grad = ctx.createLinearGradient(0, 0, c.width, c.height);
+    grad.addColorStop(0, '#0a0e17'); 
+    grad.addColorStop(1, '#141b2b');
+    ctx.fillStyle = grad; 
+    ctx.fillRect(0, 0, c.width, c.height);
     drawAxis();
     if (L === 0 && W === 0 && T === 0) return;
-    let maxDim = Math.max(L, W, T, 100); let scale = 90 / maxDim;
-    let l = L * scale; let w = W * scale; let t = T * scale;
-    let cx = c.width / 2 - 20 + (posX * scale); let cy = c.height / 2 + 30 - (posZ * scale);
-    let vX, vY, vZ;
+    var maxDim = Math.max(L, W, T, 100); 
+    var scale = 90 / maxDim;
+    var l = L * scale; 
+    var w = W * scale; 
+    var t = T * scale;
+    var cx = c.width / 2 - 20 + (posX * scale); 
+    var cy = c.height / 2 + 30 - (posZ * scale);
+    var vX, vY, vZ;
     if (ORI === "Z") { vX = l; vY = w; vZ = t; } 
     else if (ORI === "X") { vX = t; vY = w; vZ = l; } 
     else if (ORI === "Y") { vX = l; vY = t; vZ = w; }
-    drawBox3D(cx, cy, vX, vY, vZ, `L=${L}`, `W=${W}`, `T=${T}`);
+    drawBox3D(cx, cy, vX, vY, vZ, 'L=' + L, 'W=' + W, 'T=' + T);
 }
 
 function drawAxis() {
-    ctx.lineWidth = 2.5; ctx.font = "bold 13px Inter, sans-serif";
-    let x0 = 50, y0 = 220;
-    ctx.strokeStyle = "#ff6b6b"; ctx.fillStyle = "#ff6b6b"; ctx.shadowColor = "rgba(255,107,107,0.3)"; ctx.shadowBlur = 8;
-    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x0 + 50, y0); ctx.stroke(); ctx.shadowBlur = 0; ctx.fillText("X", x0 + 55, y0 + 4);
-    ctx.strokeStyle = "#74b9ff"; ctx.fillStyle = "#74b9ff"; ctx.shadowColor = "rgba(116,185,255,0.3)"; ctx.shadowBlur = 8;
-    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x0 + 35, y0 - 35); ctx.stroke(); ctx.shadowBlur = 0; ctx.fillText("Y", x0 + 40, y0 - 38);
-    ctx.strokeStyle = "#55efc4"; ctx.fillStyle = "#55efc4"; ctx.shadowColor = "rgba(85,239,196,0.3)"; ctx.shadowBlur = 8;
-    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x0, y0 - 50); ctx.stroke(); ctx.shadowBlur = 0; ctx.fillText("Z", x0 - 4, y0 - 55);
+    ctx.lineWidth = 2.5; 
+    ctx.font = "bold 13px Inter, sans-serif";
+    var x0 = 50, y0 = 220;
+    ctx.strokeStyle = "#ff6b6b"; 
+    ctx.fillStyle = "#ff6b6b"; 
+    ctx.shadowColor = "rgba(255,107,107,0.3)"; 
+    ctx.shadowBlur = 8;
+    ctx.beginPath(); 
+    ctx.moveTo(x0, y0); 
+    ctx.lineTo(x0 + 50, y0); 
+    ctx.stroke(); 
+    ctx.shadowBlur = 0; 
+    ctx.fillText("X", x0 + 55, y0 + 4);
+    ctx.strokeStyle = "#74b9ff"; 
+    ctx.fillStyle = "#74b9ff"; 
+    ctx.shadowColor = "rgba(116,185,255,0.3)"; 
+    ctx.shadowBlur = 8;
+    ctx.beginPath(); 
+    ctx.moveTo(x0, y0); 
+    ctx.lineTo(x0 + 35, y0 - 35); 
+    ctx.stroke(); 
+    ctx.shadowBlur = 0; 
+    ctx.fillText("Y", x0 + 40, y0 - 38);
+    ctx.strokeStyle = "#55efc4"; 
+    ctx.fillStyle = "#55efc4"; 
+    ctx.shadowColor = "rgba(85,239,196,0.3)"; 
+    ctx.shadowBlur = 8;
+    ctx.beginPath(); 
+    ctx.moveTo(x0, y0); 
+    ctx.lineTo(x0, y0 - 50); 
+    ctx.stroke(); 
+    ctx.shadowBlur = 0; 
+    ctx.fillText("Z", x0 - 4, y0 - 55);
 }
 
-function projectISO(x, y, z, cx, cy) { let kY = 0.55; return { x: cx + x + y * kY, y: cy - z - y * kY }; }
+function projectISO(x, y, z, cx, cy) { 
+    var kY = 0.55; 
+    return { x: cx + x + y * kY, y: cy - z - y * kY }; 
+}
 
 function drawBox3D(cx, cy, d1, d2, d3, lbl1, lbl2, lbl3) {
-    ctx.lineWidth = 1.8; let offsetX = cx - d1 / 2; let offsetY = cy + d3 / 2;
-    let b0 = projectISO(0, 0, 0, offsetX, offsetY); let b1 = projectISO(d1, 0, 0, offsetX, offsetY); let b2 = projectISO(d1, d2, 0, offsetX, offsetY); let b3 = projectISO(0, d2, 0, offsetX, offsetY);
-    let t0 = projectISO(0, 0, d3, offsetX, offsetY); let t1 = projectISO(d1, 0, d3, offsetX, offsetY); let t2 = projectISO(d1, d2, d3, offsetX, offsetY); let t3 = projectISO(0, d2, d3, offsetX, offsetY);
-    ctx.shadowColor = "rgba(108,92,231,0.15)"; ctx.shadowBlur = 20;
-    const mainColor = '#6c5ce7'; const lightColor = '#a29bfe';
-    ctx.strokeStyle = mainColor; ctx.fillStyle = "rgba(108,92,231,0.08)";
-    ctx.beginPath(); ctx.moveTo(b0.x, b0.y); ctx.lineTo(b1.x, b1.y); ctx.lineTo(b2.x, b2.y); ctx.lineTo(b3.x, b3.y); ctx.closePath(); ctx.fill(); ctx.stroke();
-    let bEdges = [b0, b1, b2, b3]; let tEdges = [t0, t1, t2, t3];
-    for (let i = 0; i < 4; i++) { ctx.shadowBlur = 12; ctx.strokeStyle = i === 0 || i === 3 ? mainColor : lightColor; ctx.globalAlpha = i === 0 || i === 3 ? 1 : 0.6; ctx.beginPath(); ctx.moveTo(bEdges[i].x, bEdges[i].y); ctx.lineTo(tEdges[i].x, tEdges[i].y); ctx.stroke(); ctx.globalAlpha = 1; }
-    ctx.shadowBlur = 20; ctx.strokeStyle = lightColor; ctx.fillStyle = "rgba(162,155,254,0.06)";
-    ctx.beginPath(); ctx.moveTo(t0.x, t0.y); ctx.lineTo(t1.x, t1.y); ctx.lineTo(t2.x, t2.y); ctx.lineTo(t3.x, t3.y); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.shadowBlur = 0; ctx.strokeStyle = "rgba(162,155,254,0.3)"; ctx.lineWidth = 0.5; ctx.beginPath(); ctx.moveTo(t0.x, t0.y); ctx.lineTo(t1.x, t1.y); ctx.stroke();
-    ctx.shadowBlur = 0; ctx.fillStyle = "rgba(255,255,255,0.8)"; ctx.font = "bold 13px Inter, sans-serif";
-    let c1 = projectISO(d1 / 2, 0, 0, offsetX, offsetY); let c2 = projectISO(d1, d2 / 2, d3, offsetX, offsetY); let c3 = projectISO(0, 0, d3 / 2, offsetX, offsetY);
-    const drawLabel = (text, x, y) => {
-        const metrics = ctx.measureText(text); const width = metrics.width + 16; const height = 26; const rx = x - width/2; const ry = y - height/2;
-        ctx.fillStyle = "rgba(10,14,23,0.8)"; ctx.shadowColor = "rgba(0,0,0,0.5)"; ctx.shadowBlur = 10;
-        ctx.beginPath(); const radius = 6; ctx.moveTo(rx + radius, ry); ctx.lineTo(rx + width - radius, ry); ctx.quadraticCurveTo(rx + width, ry, rx + width, ry + radius); ctx.lineTo(rx + width, ry + height - radius); ctx.quadraticCurveTo(rx + width, ry + height, rx + width - radius, ry + height); ctx.lineTo(rx + radius, ry + height); ctx.quadraticCurveTo(rx, ry + height, rx, ry + height - radius); ctx.lineTo(rx, ry + radius); ctx.quadraticCurveTo(rx, ry, rx + radius, ry); ctx.closePath(); ctx.fill();
-        ctx.shadowBlur = 0; ctx.fillStyle = "rgba(255,255,255,0.9)"; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(text, x, y + 1);
-    };
-    drawLabel(lbl1, c1.x, c1.y + 18); drawLabel(lbl2, c2.x - 15, c2.y - 8); drawLabel(lbl3, c3.x - 55, c3.y + 4);
+    ctx.lineWidth = 1.8; 
+    var offsetX = cx - d1 / 2; 
+    var offsetY = cy + d3 / 2;
+    var b0 = projectISO(0, 0, 0, offsetX, offsetY); 
+    var b1 = projectISO(d1, 0, 0, offsetX, offsetY); 
+    var b2 = projectISO(d1, d2, 0, offsetX, offsetY); 
+    var b3 = projectISO(0, d2, 0, offsetX, offsetY);
+    var t0 = projectISO(0, 0, d3, offsetX, offsetY); 
+    var t1 = projectISO(d1, 0, d3, offsetX, offsetY); 
+    var t2 = projectISO(d1, d2, d3, offsetX, offsetY); 
+    var t3 = projectISO(0, d2, d3, offsetX, offsetY);
+    ctx.shadowColor = "rgba(108,92,231,0.15)"; 
+    ctx.shadowBlur = 20;
+    var mainColor = '#6c5ce7'; 
+    var lightColor = '#a29bfe';
+    ctx.strokeStyle = mainColor; 
+    ctx.fillStyle = "rgba(108,92,231,0.08)";
+    ctx.beginPath(); 
+    ctx.moveTo(b0.x, b0.y); 
+    ctx.lineTo(b1.x, b1.y); 
+    ctx.lineTo(b2.x, b2.y); 
+    ctx.lineTo(b3.x, b3.y); 
+    ctx.closePath(); 
+    ctx.fill(); 
+    ctx.stroke();
+    var bEdges = [b0, b1, b2, b3]; 
+    var tEdges = [t0, t1, t2, t3];
+    for (var i = 0; i < 4; i++) { 
+        ctx.shadowBlur = 12; 
+        ctx.strokeStyle = i === 0 || i === 3 ? mainColor : lightColor; 
+        ctx.globalAlpha = i === 0 || i === 3 ? 1 : 0.6; 
+        ctx.beginPath(); 
+        ctx.moveTo(bEdges[i].x, bEdges[i].y); 
+        ctx.lineTo(tEdges[i].x, tEdges[i].y); 
+        ctx.stroke(); 
+        ctx.globalAlpha = 1; 
+    }
+    ctx.shadowBlur = 20; 
+    ctx.strokeStyle = lightColor; 
+    ctx.fillStyle = "rgba(162,155,254,0.06)";
+    ctx.beginPath(); 
+    ctx.moveTo(t0.x, t0.y); 
+    ctx.lineTo(t1.x, t1.y); 
+    ctx.lineTo(t2.x, t2.y); 
+    ctx.lineTo(t3.x, t3.y); 
+    ctx.closePath(); 
+    ctx.fill(); 
+    ctx.stroke();
+    ctx.shadowBlur = 0; 
+    ctx.strokeStyle = "rgba(162,155,254,0.3)"; 
+    ctx.lineWidth = 0.5; 
+    ctx.beginPath(); 
+    ctx.moveTo(t0.x, t0.y); 
+    ctx.lineTo(t1.x, t1.y); 
+    ctx.stroke();
+    ctx.shadowBlur = 0; 
+    ctx.fillStyle = "rgba(255,255,255,0.8)"; 
+    ctx.font = "bold 13px Inter, sans-serif";
+    var c1 = projectISO(d1 / 2, 0, 0, offsetX, offsetY); 
+    var c2 = projectISO(d1, d2 / 2, d3, offsetX, offsetY); 
+    var c3 = projectISO(0, 0, d3 / 2, offsetX, offsetY);
+    
+    function drawLabel(text, x, y) {
+        var metrics = ctx.measureText(text); 
+        var width = metrics.width + 16; 
+        var height = 26; 
+        var rx = x - width/2; 
+        var ry = y - height/2;
+        ctx.fillStyle = "rgba(10,14,23,0.8)"; 
+        ctx.shadowColor = "rgba(0,0,0,0.5)"; 
+        ctx.shadowBlur = 10;
+        ctx.beginPath(); 
+        var radius = 6; 
+        ctx.moveTo(rx + radius, ry); 
+        ctx.lineTo(rx + width - radius, ry); 
+        ctx.quadraticCurveTo(rx + width, ry, rx + width, ry + radius); 
+        ctx.lineTo(rx + width, ry + height - radius); 
+        ctx.quadraticCurveTo(rx + width, ry + height, rx + width - radius, ry + height); 
+        ctx.lineTo(rx + radius, ry + height); 
+        ctx.quadraticCurveTo(rx, ry + height, rx, ry + height - radius); 
+        ctx.lineTo(rx, ry + radius); 
+        ctx.quadraticCurveTo(rx, ry, rx + radius, ry); 
+        ctx.closePath(); 
+        ctx.fill();
+        ctx.shadowBlur = 0; 
+        ctx.fillStyle = "rgba(255,255,255,0.9)"; 
+        ctx.textAlign = 'center'; 
+        ctx.textBaseline = 'middle'; 
+        ctx.fillText(text, x, y + 1);
+    }
+    drawLabel(lbl1, c1.x, c1.y + 18); 
+    drawLabel(lbl2, c2.x - 15, c2.y - 8); 
+    drawLabel(lbl3, c3.x - 55, c3.y + 4);
 }
 
-function log(t, type = 'user') {
-    const chatBox = document.getElementById("chat"); if (!chatBox) return;
-    const className = type === 'user' ? 'user' : type === 'assistant' ? 'assistant' : 'system';
-    chatBox.innerHTML += `<div class="${className}">${t}</div>`; chatBox.scrollTop = chatBox.scrollHeight;
+function log(t, type) {
+    type = type || 'user';
+    var chatBox = document.getElementById("chat"); 
+    if (!chatBox) return;
+    var className = type === 'user' ? 'user' : type === 'assistant' ? 'assistant' : 'system';
+    chatBox.innerHTML += '<div class="' + className + '">' + t + '</div>'; 
+    chatBox.scrollTop = chatBox.scrollHeight;
 }
 
 function speak(t) {
-    window.speechSynthesis.cancel(); let u = new SpeechSynthesisUtterance(t);
-    u.lang = "vi-VN"; u.rate = 0.95; u.pitch = 1.05; u.volume = 1;
-    isSpeaking = true; u.onend = () => { isSpeaking = false; }; window.speechSynthesis.speak(u);
+    window.speechSynthesis.cancel(); 
+    var u = new SpeechSynthesisUtterance(t);
+    u.lang = "vi-VN"; 
+    u.rate = 0.95; 
+    u.pitch = 1.05; 
+    u.volume = 1;
+    isSpeaking = true; 
+    u.onend = function() { isSpeaking = false; }; 
+    window.speechSynthesis.speak(u);
 }
 
 function reset() {
-    document.getElementById("px").value = 0; document.getElementById("py").value = 0; document.getElementById("pz").value = 0;
-    document.getElementById("dx").value = 0; document.getElementById("dy").value = 0; document.getElementById("dz").value = 0;
-    document.getElementById("r1").value = 150; document.getElementById("r2").value = 150; document.getElementById("r3").value = 150; document.getElementById("r4").value = 150;
-    hasAutoTriggeredSave = false; setOri('Z'); log("↺ Reset all parameters", 'system');
+    document.getElementById("px").value = 0; 
+    document.getElementById("py").value = 0; 
+    document.getElementById("pz").value = 0;
+    document.getElementById("dx").value = 0; 
+    document.getElementById("dy").value = 0; 
+    document.getElementById("dz").value = 0;
+    document.getElementById("r1").value = 150; 
+    document.getElementById("r2").value = 150; 
+    document.getElementById("r3").value = 150; 
+    document.getElementById("r4").value = 150;
+    hasAutoTriggeredSave = false; 
+    setOri('Z'); 
+    log("↺ Reset all parameters", 'system');
 }
 
-function help() { const modal = document.getElementById('helpModal'); if (modal) { modal.classList.add('active'); document.body.style.overflow = 'hidden'; log("📖 Help opened", 'system'); } }
-function closeHelp() { const modal = document.getElementById('helpModal'); if (modal) { modal.classList.remove('active'); document.body.style.overflow = ''; } }
+function help() { 
+    var modal = document.getElementById('helpModal'); 
+    if (modal) { 
+        modal.classList.add('active'); 
+        document.body.style.overflow = 'hidden'; 
+        log("📖 Help opened", 'system'); 
+    } 
+}
+
+function closeHelp() { 
+    var modal = document.getElementById('helpModal'); 
+    if (modal) { 
+        modal.classList.remove('active'); 
+        document.body.style.overflow = ''; 
+    } 
+}
 
 // ==================== LIBRARY VOICE SEARCH ====================
 function voiceSearchLibrary() {
@@ -750,7 +1057,7 @@ function voiceSearchLibrary() {
     }
     
     if (!libraryVoiceRecognition) {
-        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SR) {
             log("❌ Browser doesn't support Voice", 'system');
             alert("❌ Browser doesn't support Voice");
@@ -762,32 +1069,32 @@ function voiceSearchLibrary() {
         libraryVoiceRecognition.continuous = false;
         libraryVoiceRecognition.interimResults = true;
         
-        libraryVoiceRecognition.onstart = () => {
+        libraryVoiceRecognition.onstart = function() {
             isLibraryVoiceListening = true;
             document.getElementById('voiceSearchBtn').classList.add('listening');
             document.getElementById('voiceSearchBtn').innerHTML = '<span class="btn-icon">⏹</span>';
             log("🎤 Listening for search query...", 'system');
         };
         
-        libraryVoiceRecognition.onend = () => {
+        libraryVoiceRecognition.onend = function() {
             stopLibraryVoice();
         };
         
-        libraryVoiceRecognition.onerror = (e) => {
+        libraryVoiceRecognition.onerror = function(e) {
             if (e.error !== 'no-speech') {
-                log(`⚠️ Error: ${e.error}`, 'system');
+                log("⚠️ Error: " + e.error, 'system');
             }
             stopLibraryVoice();
         };
         
-        libraryVoiceRecognition.onresult = (e) => {
-            let transcript = '';
-            for (let i = e.resultIndex; i < e.results.length; i++) {
+        libraryVoiceRecognition.onresult = function(e) {
+            var transcript = '';
+            for (var i = e.resultIndex; i < e.results.length; i++) {
                 transcript += e.results[i][0].transcript;
                 if (e.results[i].isFinal) {
                     document.getElementById('searchQuery').value = transcript;
                     applyFilters();
-                    log(`🔍 Voice search: "${transcript}"`, 'user');
+                    log('🔍 Voice search: "' + transcript + '"', 'user');
                     stopLibraryVoice();
                 }
             }
@@ -797,7 +1104,10 @@ function voiceSearchLibrary() {
     try {
         libraryVoiceRecognition.start();
     } catch(e) {
-        try { libraryVoiceRecognition.stop(); setTimeout(() => { libraryVoiceRecognition.start(); }, 300); } catch(e2) {}
+        try { 
+            libraryVoiceRecognition.stop(); 
+            setTimeout(function() { libraryVoiceRecognition.start(); }, 300); 
+        } catch(e2) {}
     }
 }
 
@@ -806,7 +1116,7 @@ function stopLibraryVoice() {
     if (libraryVoiceRecognition) {
         try { libraryVoiceRecognition.stop(); } catch(e) {}
     }
-    const btn = document.getElementById('voiceSearchBtn');
+    var btn = document.getElementById('voiceSearchBtn');
     if (btn) {
         btn.classList.remove('listening');
         btn.innerHTML = '<span class="btn-icon">🎤</span>';
@@ -815,21 +1125,36 @@ function stopLibraryVoice() {
 
 // ==================== EVENT LISTENERS ====================
 document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.modal-overlay').forEach(modal => {
-        modal.addEventListener('click', function(e) { if (e.target === this) { if(this.id === 'helpModal') closeHelp(); if(this.id === 'saveModal') closeSaveDialog(); if(this.id === 'libraryModal') closeLibrary(); } });
-    });
+    var modals = document.querySelectorAll('.modal-overlay');
+    for (var i = 0; i < modals.length; i++) {
+        modals[i].addEventListener('click', function(e) { 
+            if (e.target === this) { 
+                if(this.id === 'helpModal') closeHelp(); 
+                if(this.id === 'saveModal') closeSaveDialog(); 
+                if(this.id === 'libraryModal') closeLibrary(); 
+            } 
+        });
+    }
     syncWithGoogleSheets();
 });
 
 document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') { closeHelp(); closeSaveDialog(); closeLibrary(); closePasswordModal(); }
+    if (e.key === 'Escape') { 
+        closeHelp(); 
+        closeSaveDialog(); 
+        closeLibrary(); 
+        closePasswordModal(); 
+    }
     if (e.key === 'Enter') {
-        const passwordModal = document.getElementById('passwordModal');
-        if (passwordModal) { e.preventDefault(); confirmDeleteWithPassword(); }
+        var passwordModal = document.getElementById('passwordModal');
+        if (passwordModal) { 
+            e.preventDefault(); 
+            confirmDeleteWithPassword(); 
+        }
         
-        const libraryModal = document.getElementById('libraryModal');
+        var libraryModal = document.getElementById('libraryModal');
         if (libraryModal && libraryModal.classList.contains('active')) {
-            const searchInput = document.getElementById('searchQuery');
+            var searchInput = document.getElementById('searchQuery');
             if (document.activeElement === searchInput) {
                 applyFilters();
             }
@@ -837,7 +1162,13 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
-document.querySelectorAll("input").forEach(i => { i.addEventListener("input", () => { hasAutoTriggeredSave = false; draw(); }); });
+var inputs = document.querySelectorAll("input");
+for (var i = 0; i < inputs.length; i++) {
+    inputs[i].addEventListener("input", function() { 
+        hasAutoTriggeredSave = false; 
+        draw(); 
+    });
+}
 window.addEventListener("resize", draw);
 
 // ==================== STARTUP ====================
