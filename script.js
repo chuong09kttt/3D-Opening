@@ -10,7 +10,8 @@ let isSpeaking = false;
 let hasAutoTriggeredSave = false;
 
 // ==================== CONFIGURATION ====================
-const GOOGLE_SHEETS_DATA_URL = 'https://script.google.com/macros/s/AKfycbz9EF-jw28rFIkCekd6NWyCldCK9HR-YHO2pVne85D3tIdU6bBc7L-bD5-ZZULIXZbv/exec';
+const GOOGLE_SHEETS_DATA_URL = 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec';
+const TOOL_DOWNLOAD_URL = 'https://drive.google.com/drive/folders/YOUR_FOLDER_ID'; // Thay bằng link Drive của bạn
 
 let isSyncing = false;
 let library = [];
@@ -18,63 +19,20 @@ let deleteTargetIndex = null;
 let currentFilter = 'all';
 let currentDeptFilter = null;
 let isAddFormVisible = false;
-let toolAddress = localStorage.getItem('toolAddress') || '';
 
-// ==================== TOOL ADDRESS FUNCTIONS ====================
-function saveToolAddress() {
-    var input = document.getElementById('toolAddress');
-    if (input) {
-        toolAddress = input.value.trim();
-        localStorage.setItem('toolAddress', toolAddress);
-        updateToolAddressDisplay();
-        log('💾 Đã lưu địa chỉ công cụ: ' + toolAddress, 'system');
-        alert('✅ Đã lưu địa chỉ công cụ thành công!');
-    }
-}
+// Khai báo biến cho Library Voice
+let libraryVoiceRecognition = null;
+let isLibraryVoiceListening = false;
 
-function updateToolAddressDisplay() {
-    var display = document.getElementById('toolAddressDisplay');
-    var input = document.getElementById('toolAddress');
-    if (display && input) {
-        if (toolAddress) {
-            display.style.display = 'block';
-            display.textContent = '📌 ' + toolAddress;
-            input.value = toolAddress;
-        } else {
-            display.style.display = 'none';
-        }
+// ==================== TOOL DOWNLOAD ====================
+function open3DOpeningTool() {
+    if (!TOOL_DOWNLOAD_URL || TOOL_DOWNLOAD_URL.indexOf('http') !== 0) {
+        alert('⚠️ Download link for 3D Opening Tool is not configured.');
+        return;
     }
-}
 
-function filterByTool(tool) {
-    // Đếm số lượng document có tag "3d" hoặc "opening"
-    var count = library.filter(function(doc) {
-        var tags = doc.tags || [];
-        return tags.some(function(t) { 
-            return t.toLowerCase().includes('3d') || 
-                   t.toLowerCase().includes('opening') ||
-                   t.toLowerCase().includes('tool');
-        });
-    }).length;
-    document.getElementById('countTool3D').textContent = count;
-    log('🔧 3D Opening Tool: ' + count + ' documents available', 'system');
-    
-    // Hiển thị địa chỉ công cụ nếu có
-    if (toolAddress) {
-        log('📌 Địa chỉ công cụ: ' + toolAddress, 'system');
-    }
-    
-    // Filter documents với tag liên quan
-    var filtered = library.filter(function(doc) {
-        var tags = doc.tags || [];
-        var name = doc.name || '';
-        return tags.some(function(t) { 
-            return t.toLowerCase().includes('3d') || 
-                   t.toLowerCase().includes('opening') ||
-                   t.toLowerCase().includes('tool');
-        }) || name.toLowerCase().includes('opening');
-    });
-    renderLibrary(filtered);
+    log('🧊 Opening 3D Opening Tool download page...', 'system');
+    window.open(TOOL_DOWNLOAD_URL, '_blank', 'noopener,noreferrer');
 }
 
 // ==================== SYNC FUNCTIONS ====================
@@ -91,11 +49,11 @@ function syncWithGoogleSheets() {
         
         if (response && response.success && response.data) {
             library = response.data.map(item => ({
-                name: item.Name || item.name || 'Untitled',
-                link: item.Link || item.link || '',
-                tags: item.Tags ? item.Tags.split(',').map(t => t.trim()).filter(t => t) : [],
-                category: item.Category || item.category || 'others',
-                department: item.Department || item.department || 'others'
+                name: item.name || 'Untitled',
+                link: item.link || '',
+                tags: item.tags ? item.tags.split(',').map(t => t.trim()).filter(t => t) : [],
+                category: item.category || 'others',
+                department: item.department || 'others'
             }));
             renderLibrary();
             updateCategoryCounts();
@@ -196,17 +154,6 @@ function updateCategoryCounts() {
     document.getElementById('countElectrical').textContent = deptCounts.electrical;
     document.getElementById('countOutfitting').textContent = deptCounts.outfitting;
     document.getElementById('countOthers').textContent = deptCounts.others;
-    
-    // Cập nhật số lượng cho 3D Opening Tool
-    var toolCount = library.filter(function(doc) {
-        var tags = doc.tags || [];
-        return tags.some(function(t) { 
-            return t.toLowerCase().includes('3d') || 
-                   t.toLowerCase().includes('opening') ||
-                   t.toLowerCase().includes('tool');
-        });
-    }).length;
-    document.getElementById('countTool3D').textContent = toolCount;
 }
 
 // ==================== CATEGORY FILTERS ====================
@@ -351,27 +298,37 @@ function addDocument() {
         department: department 
     };
     
+    // Hiển thị loading
+    var addBtn = document.querySelector('#addForm .btn-primary');
+    if (addBtn) {
+        addBtn.textContent = '⏳';
+        addBtn.disabled = true;
+    }
+    
     addDocumentToGoogleSheets(newDoc).then(function() {
-        library.push(newDoc);
-        renderLibrary();
-        updateCategoryCounts();
+        log('📤 Document "' + name + '" submitted successfully', 'system');
+        updateSyncStatus('success', 'Added "' + name + '"');
         
+        // Reset form
         nameInput.value = '';
         linkInput.value = '';
         tagsInput.value = '';
         
-        log('📤 Document "' + name + '" added successfully', 'system');
-        updateSyncStatus('success', 'Added "' + name + '"');
-        
+        // Sync lại để lấy dữ liệu đầy đủ từ cloud
         setTimeout(function() {
             syncWithGoogleSheets();
-        }, 1500);
+        }, 500);
         
         nameInput.focus();
     }).catch(function(error) {
         console.error('Add document error:', error);
         alert('❌ Failed to submit document. Check your connection.');
         log('⚠️ Failed to submit document', 'system');
+    }).finally(function() {
+        if (addBtn) {
+            addBtn.textContent = '➕ Add';
+            addBtn.disabled = false;
+        }
     });
 }
 
@@ -543,7 +500,6 @@ function openLibrary() {
         document.getElementById('searchResults').style.display = 'none';
         renderLibrary();
         updateCategoryCounts();
-        updateToolAddressDisplay();
         log("📚 Library opened", 'system');
         syncWithGoogleSheets();
     }
@@ -1237,7 +1193,6 @@ document.addEventListener('DOMContentLoaded', function() {
             } 
         });
     }
-    updateToolAddressDisplay();
     syncWithGoogleSheets();
 });
 
