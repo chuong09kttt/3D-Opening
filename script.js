@@ -877,32 +877,49 @@ function processFullVoiceNLP(t) {
         }
 
         // ===== XỬ LÝ CORNER RADIUS (CẬP NHẬT RIÊNG TỪNG GÓC) =====
+        // Hàm hỗ trợ cho phép bắt chính xác "R1 100", "R2=200" với R viết hoa hoặc thường
+        function extractRadiusValue(text, radiusKey) {
+            var patterns = [
+                new RegExp(radiusKey + '\\s*(?:là|:|=)\\s*([\\d.,]+)', 'i'),
+                new RegExp(radiusKey + '\\s+([\\d.,]+)', 'i'),
+                new RegExp(radiusKey.toLowerCase() + '\\s*(?:là|:|=)\\s*([\\d.,]+)', 'i'),
+                new RegExp(radiusKey.toLowerCase() + '\\s+([\\d.,]+)', 'i')
+            ];
+            for (var i = 0; i < patterns.length; i++) {
+                var match = text.match(patterns[i]);
+                if (match) {
+                    return cleanNumberString(match[1]);
+                }
+            }
+            return null;
+        }
+
         // R1
-        var r1Val = extractNumber(str, ['r1', 'r 1']);
+        var r1Val = extractRadiusValue(str, 'R1');
         if (r1Val !== null) { 
             document.getElementById("r1").value = r1Val; 
             updatedCount++; 
             log("⭕ R1: " + r1Val + "mm", 'system');
         }
-        
+
         // R2
-        var r2Val = extractNumber(str, ['r2', 'r 2']);
+        var r2Val = extractRadiusValue(str, 'R2');
         if (r2Val !== null) { 
             document.getElementById("r2").value = r2Val; 
             updatedCount++; 
             log("⭕ R2: " + r2Val + "mm", 'system');
         }
-        
+
         // R3
-        var r3Val = extractNumber(str, ['r3', 'r 3']);
+        var r3Val = extractRadiusValue(str, 'R3');
         if (r3Val !== null) { 
             document.getElementById("r3").value = r3Val; 
             updatedCount++; 
             log("⭕ R3: " + r3Val + "mm", 'system');
         }
-        
+
         // R4
-        var r4Val = extractNumber(str, ['r4', 'r 4']);
+        var r4Val = extractRadiusValue(str, 'R4');
         if (r4Val !== null) { 
             document.getElementById("r4").value = r4Val; 
             updatedCount++; 
