@@ -1516,57 +1516,29 @@ function generateAndDownloadFile(fileName) {
 
     var blob = new Blob([data], { type: "text/plain" });
 
-    // --- BẮT ĐẦU PHẦN SỬA ĐỔI LƯU FILE ---
-    // Sử dụng API mới để hiện hộp thoại lưu file đúng chuẩn hệ điều hành
+    // --- GIẢI PHÁP MỚI: DÙNG PHƯƠNG THỨC TẢI XUỐNG (DOWNLOAD) MẶC ĐỊNH ---
+    // Cách này hoạt động với cả Bấm nút và Voice, không bị lỗi trình duyệt chặn
     try {
-        if (window.showSaveFilePicker) {
-            const opts = {
-                suggestedName: fileName + '.mac',
-                types: [{
-                    description: "MAC File",
-                    accept: { "text/plain": [".mac"] }
-                }]
-            };
-            window.showSaveFilePicker(opts)
-                .then(fileHandle => fileHandle.createWritable())
-                .then(writable => {
-                    writable.write(blob);
-                    writable.close();
-                    var successMsg = "✅ Đã lưu file " + fileName + ".mac thành công!";
-                    log(successMsg, 'system');
-                    speak("Đã lưu file thành công");
-                })
-                .catch(err => {
-                    if (err.name !== 'AbortError') { // Nếu người dùng bấm Cancel
-                        console.error("Save error:", err);
-                        log("⚠️ Lỗi khi lưu file: " + err.message, 'system');
-                    }
-                });
-        } else {
-            // Fallback cho trình duyệt cũ (như Firefox, Safari) không hỗ trợ showSaveFilePicker
-            var a = document.createElement("a"); 
-            a.href = URL.createObjectURL(blob); 
-            a.download = fileName + '.mac';
-            document.body.appendChild(a); 
-            a.click(); 
-            document.body.removeChild(a);
-            var successMsg = "✅ Đã xuất file " + fileName + ".mac thành công!";
-            log(successMsg, 'system');
-            speak("Đã xuất file thành công");
-        }
-    } catch (e) {
-        // Fallback nếu có lỗi bất ngờ
         var a = document.createElement("a"); 
         a.href = URL.createObjectURL(blob); 
         a.download = fileName + '.mac';
         document.body.appendChild(a); 
         a.click(); 
         document.body.removeChild(a);
-        var successMsg = "✅ Đã xuất file " + fileName + ".mac thành công!";
+        
+        // Giải phóng bộ nhớ sau khi tải xuống
+        setTimeout(function() {
+            URL.revokeObjectURL(a.href);
+        }, 100);
+        
+        var successMsg = "✅ Đã xuất file " + fileName + ".mac thành công! (Lưu vào thư mục Downloads)";
         log(successMsg, 'system');
         speak("Đã xuất file thành công");
+        
+    } catch (e) {
+        console.error("Lỗi tải file:", e);
+        log("⚠️ Lỗi khi tải xuống: " + e.message, 'system');
     }
-    // --- KẾT THÚC PHẦN SỬA ĐỔI ---
 }
 
 function setOri(o) { 
