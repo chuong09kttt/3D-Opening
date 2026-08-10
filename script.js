@@ -1516,22 +1516,24 @@ function generateAndDownloadFile(fileName) {
 
     var blob = new Blob([data], { type: "text/plain" });
 
-    // --- GIẢI PHÁP MỚI: DÙNG PHƯƠNG THỨC TẢI XUỐNG (DOWNLOAD) MẶC ĐỊNH ---
-    // Cách này hoạt động với cả Bấm nút và Voice, không bị lỗi trình duyệt chặn
+    // --- PHƯƠNG THỨC TẢI XUỐNG TỐI ƯU (KHÔNG BỊ LỖI VOICE) ---
     try {
         var a = document.createElement("a"); 
         a.href = URL.createObjectURL(blob); 
         a.download = fileName + '.mac';
         document.body.appendChild(a); 
+        
+        // Nếu người dùng bấm nút Export: Trình duyệt thường mở hộp thoại chọn nơi lưu (tùy cài đặt)
+        // Nếu người dùng dùng Voice: Tự động tải về thư mục Downloads mặc định.
         a.click(); 
         document.body.removeChild(a);
         
-        // Giải phóng bộ nhớ sau khi tải xuống
+        // Giải phóng bộ nhớ
         setTimeout(function() {
             URL.revokeObjectURL(a.href);
         }, 100);
         
-        var successMsg = "✅ Đã xuất file " + fileName + ".mac thành công! (Lưu vào thư mục Downloads)";
+        var successMsg = "✅ Đã xuất file " + fileName + ".mac thành công!";
         log(successMsg, 'system');
         speak("Đã xuất file thành công");
         
