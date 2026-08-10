@@ -34,7 +34,7 @@ let isLibraryVoiceListening = false;
 let recognitionRestartAttempts = 0;
 const MAX_RESTART_ATTEMPTS = 3;
 
-// ==================== AUTO EXPORT ====================
+// ==================== AUTO EXPORT (VOICE) ====================
 
 function autoExportMAC() {
     if (autoExportLock) return;
@@ -52,7 +52,8 @@ function autoExportMAC() {
     autoExportLock = true;
     hasAutoTriggeredSave = true;
 
-    const fileName = "Opening_" + L + "x" + W + "x" + T;
+    // Tên file mặc định cho chế độ Voice
+    const fileName = "Import";
 
     console.log("AUTO EXPORT:", fileName);
 
@@ -62,9 +63,6 @@ function autoExportMAC() {
         "💾 Auto exported: " + fileName + ".mac",
         'system'
     );
-
-    // KHÔNG tự động mở khóa - chỉ mở khóa khi người dùng thay đổi thông số
-    // hoặc bấm Reset. Xem phần event listener bên dưới.
 }
 
 // ==================== TOOL DOWNLOAD ====================
@@ -926,9 +924,7 @@ function processFullVoiceNLP(t) {
             log("⭕ R4: " + r4Val + "mm", 'system');
         }
 
-
-
-         // Tương thích ngược: Nếu người dùng nói chung chung "corner radius 200" mà chưa có R nào được set, set đồng loạt
+        // Tương thích ngược: Nếu người dùng nói chung chung "corner radius 200" mà chưa có R nào được set, set đồng loạt
         var radAll = null;
         var radKeywords = ['corner radius', 'radius', 'bán kính', 'bo góc'];
         var valRad = extractNumber(str, radKeywords);
@@ -936,8 +932,7 @@ function processFullVoiceNLP(t) {
             radAll = valRad;
         }
         
-        // ĐÃ SỬA: Chỉ set đồng loạt nếu CẢ 4 GIÁ TRỊ R1, R2, R3, R4 ĐỀU CHƯA BỊ THAY ĐỔI (tức là vẫn là null)
-        // Điều này ngăn việc người dùng set R3 = 0 nhưng bị ghi đè bởi lệnh đồng loạt do nhầm lẫn từ khóa
+        // ĐÃ SỬA: Chỉ set đồng loạt nếu CẢ 4 GIÁ TRỊ R1, R2, R3, R4 ĐỀU CHƯA BỊ THAY ĐỔI
         if (radAll !== null && r1Val === null && r2Val === null && r3Val === null && r4Val === null) { 
             document.getElementById("r1").value = radAll; 
             document.getElementById("r2").value = radAll; 
@@ -946,9 +941,6 @@ function processFullVoiceNLP(t) {
             updatedCount++; 
             log("⭕ Corner radius: " + radAll + "mm (đồng loạt)", 'system');
         }
-
-
-
 
         // ===== XỬ LÝ ORIENTATION =====
         if (str.match(/orientation\s*x/i) || str.match(/axis\s*x/i) || str.match(/trục\s*x/i)) { 
@@ -1453,23 +1445,6 @@ function stopLibraryVoice() {
 }
 
 // ==================== 3D & EXPORT FUNCTIONS ====================
-function autoSaveDialog() {
-    if (hasAutoTriggeredSave) return;
-    var L = parseInputValue("dx"); 
-    var W = parseInputValue("dy"); 
-    var T = parseInputValue("dz");
-    if (L > 0 && W > 0 && T > 0) {
-        hasAutoTriggeredSave = true;
-        var modal = document.getElementById('saveModal');
-        if (modal) { 
-            modal.classList.add('active'); 
-            document.body.style.overflow = 'hidden'; 
-            document.getElementById('saveFileName').value = 'Opening_' + L + 'x' + W + 'x' + T; 
-            log("📁 Opening save dialog...", 'system'); 
-        }
-    }
-}
-
 function saveFile() {
     var L = parseInputValue("dx");
     var W = parseInputValue("dy");
@@ -1480,22 +1455,8 @@ function saveFile() {
         return;
     }
 
-    autoSaveDialog();
-}
-
-function closeSaveDialog() {
-    var modal = document.getElementById('saveModal');
-    if (modal) { 
-        modal.classList.remove('active'); 
-        document.body.style.overflow = ''; 
-        hasAutoTriggeredSave = false; 
-    }
-}
-
-function confirmSave() { 
-    var fileName = document.getElementById('saveFileName').value.trim() || "Opening"; 
-    generateAndDownloadFile(fileName); 
-    closeSaveDialog(); 
+    // Xuất trực tiếp với tên mặc định Import.mac, không mở dialog nhập tên
+    generateAndDownloadFile("Import");
 }
 
 function generateAndDownloadFile(fileName) {
@@ -1554,16 +1515,58 @@ function generateAndDownloadFile(fileName) {
         'END';
 
     var blob = new Blob([data], { type: "text/plain" });
-    var a = document.createElement("a"); 
-    a.href = URL.createObjectURL(blob); 
-    a.download = fileName + '.mac';
-    document.body.appendChild(a); 
-    a.click(); 
-    document.body.removeChild(a);
-    
-    var successMsg = "✅ Đã xuất file " + fileName + ".mac thành công!";
-    log(successMsg, 'system');
-    speak("Đã xuất file thành công");
+
+    // --- BẮT ĐẦU PHẦN SỬA ĐỔI LƯU FILE ---
+    // Sử dụng API mới để hiện hộp thoại lưu file đúng chuẩn hệ điều hành
+    try {
+        if (window.showSaveFilePicker) {
+            const opts = {
+                suggestedName: fileName + '.mac',
+                types: [{
+                    description: "MAC File",
+                    accept: { "text/plain": [".mac"] }
+                }]
+            };
+            window.showSaveFilePicker(opts)
+                .then(fileHandle => fileHandle.createWritable())
+                .then(writable => {
+                    writable.write(blob);
+                    writable.close();
+                    var successMsg = "✅ Đã lưu file " + fileName + ".mac thành công!";
+                    log(successMsg, 'system');
+                    speak("Đã lưu file thành công");
+                })
+                .catch(err => {
+                    if (err.name !== 'AbortError') { // Nếu người dùng bấm Cancel
+                        console.error("Save error:", err);
+                        log("⚠️ Lỗi khi lưu file: " + err.message, 'system');
+                    }
+                });
+        } else {
+            // Fallback cho trình duyệt cũ (như Firefox, Safari) không hỗ trợ showSaveFilePicker
+            var a = document.createElement("a"); 
+            a.href = URL.createObjectURL(blob); 
+            a.download = fileName + '.mac';
+            document.body.appendChild(a); 
+            a.click(); 
+            document.body.removeChild(a);
+            var successMsg = "✅ Đã xuất file " + fileName + ".mac thành công!";
+            log(successMsg, 'system');
+            speak("Đã xuất file thành công");
+        }
+    } catch (e) {
+        // Fallback nếu có lỗi bất ngờ
+        var a = document.createElement("a"); 
+        a.href = URL.createObjectURL(blob); 
+        a.download = fileName + '.mac';
+        document.body.appendChild(a); 
+        a.click(); 
+        document.body.removeChild(a);
+        var successMsg = "✅ Đã xuất file " + fileName + ".mac thành công!";
+        log(successMsg, 'system');
+        speak("Đã xuất file thành công");
+    }
+    // --- KẾT THÚC PHẦN SỬA ĐỔI ---
 }
 
 function setOri(o) { 
