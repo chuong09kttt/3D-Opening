@@ -926,7 +926,9 @@ function processFullVoiceNLP(t) {
             log("⭕ R4: " + r4Val + "mm", 'system');
         }
 
-        // Tương thích ngược: Nếu người dùng nói chung chung "corner radius 200" mà chưa có R nào được set, set đồng loạt
+
+
+         // Tương thích ngược: Nếu người dùng nói chung chung "corner radius 200" mà chưa có R nào được set, set đồng loạt
         var radAll = null;
         var radKeywords = ['corner radius', 'radius', 'bán kính', 'bo góc'];
         var valRad = extractNumber(str, radKeywords);
@@ -934,7 +936,8 @@ function processFullVoiceNLP(t) {
             radAll = valRad;
         }
         
-        // Chỉ set đồng loạt nếu R1, R2, R3, R4 chưa bị thay đổi bởi các lệnh riêng lẻ ở trên
+        // ĐÃ SỬA: Chỉ set đồng loạt nếu CẢ 4 GIÁ TRỊ R1, R2, R3, R4 ĐỀU CHƯA BỊ THAY ĐỔI (tức là vẫn là null)
+        // Điều này ngăn việc người dùng set R3 = 0 nhưng bị ghi đè bởi lệnh đồng loạt do nhầm lẫn từ khóa
         if (radAll !== null && r1Val === null && r2Val === null && r3Val === null && r4Val === null) { 
             document.getElementById("r1").value = radAll; 
             document.getElementById("r2").value = radAll; 
@@ -943,6 +946,9 @@ function processFullVoiceNLP(t) {
             updatedCount++; 
             log("⭕ Corner radius: " + radAll + "mm (đồng loạt)", 'system');
         }
+
+
+
 
         // ===== XỬ LÝ ORIENTATION =====
         if (str.match(/orientation\s*x/i) || str.match(/axis\s*x/i) || str.match(/trục\s*x/i)) { 
