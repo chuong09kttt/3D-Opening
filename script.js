@@ -707,19 +707,19 @@ function processFullVoiceNLP(t) {
         
         // Lớp 2: Chuẩn hóa và phát hiện từ khóa với ngữ cảnh
         function detectDimension(text) {
-            var result = { length: null, width: null, thickness: null };
+            var result = { length: null, width: null, height: null };
             
-            // Ưu tiên 1: Phát hiện "độ dày" - QUAN TRỌNG NHẤT
-            if (text.includes('độ dày') || text.includes('độ dày là')) {
-                var val = extractNumber(text, ['độ dày', 'độ dày là']);
+            // Ưu tiên 1: Phát hiện "cao/độ cao/chiều cao" - THAY THẾ CHO "độ dày"
+            if (text.includes('chiều cao') || text.includes('độ cao') || text.includes('cao')) {
+                var val = extractNumber(text, ['chiều cao', 'độ cao', 'cao', 'height']);
                 if (val !== null) {
-                    result.thickness = val;
-                    log("🔍 Phát hiện 'độ dày' → Thickness = " + val, 'system');
+                    result.height = val;
+                    log("🔍 Phát hiện 'cao' → Height = " + val, 'system');
                 }
             }
             
-            // Ưu tiên 2: Phát hiện "độ dài" - CHỈ KHI KHÔNG CÓ "độ dày"
-            if (!text.includes('độ dày') && (text.includes('độ dài') || text.includes('độ dài là'))) {
+            // Ưu tiên 2: Phát hiện "độ dài" - CHỈ KHI KHÔNG CÓ "chiều cao"
+            if (!text.includes('chiều cao') && !text.includes('độ cao') && (text.includes('độ dài') || text.includes('độ dài là'))) {
                 var val = extractNumber(text, ['độ dài', 'độ dài là']);
                 if (val !== null) {
                     result.length = val;
@@ -763,22 +763,13 @@ function processFullVoiceNLP(t) {
                 }
             }
             
-            // Ưu tiên 7: Tìm "dày" nếu chưa có
-            if (result.thickness === null) {
-                var val = extractNumber(text, ['dày', 'thickness', 'height', 'cao', 'chiều cao']);
-                if (val !== null) {
-                    result.thickness = val;
-                    log("🔍 Phát hiện 'dày' → Thickness = " + val, 'system');
-                }
-            }
-            
             return result;
         }
         
         // Lớp 3: Xác định theo ngữ cảnh (Context)
         function applyContext(dim, text) {
             // Nếu có cả 3 thông số, không cần xử lý thêm
-            if (dim.length !== null && dim.width !== null && dim.thickness !== null) {
+            if (dim.length !== null && dim.width !== null && dim.height !== null) {
                 return dim;
             }
             
@@ -790,7 +781,7 @@ function processFullVoiceNLP(t) {
                 // Nếu thiếu length và có số lớn nhất
                 if (dim.length === null && numValues.length > 0) {
                     var maxVal = Math.max.apply(null, numValues);
-                    if (dim.width !== maxVal && dim.thickness !== maxVal) {
+                    if (dim.width !== maxVal && dim.height !== maxVal) {
                         dim.length = maxVal;
                         log("🔍 Suy luận Length = " + maxVal + " (số lớn nhất)", 'system');
                     }
@@ -835,7 +826,7 @@ function processFullVoiceNLP(t) {
         
         var len = dim.length;
         var wid = dim.width;
-        var hei = dim.thickness;
+        var hei = dim.height;
         
         // Cập nhật giá trị
         if (len !== null) { 
@@ -851,7 +842,7 @@ function processFullVoiceNLP(t) {
         if (hei !== null) { 
             document.getElementById("dz").value = hei; 
             updatedCount++; 
-            log("📏 Độ dày: " + hei + "mm", 'system');
+            log("📏 Chiều cao: " + hei + "mm", 'system');
         }
 
         // ===== XỬ LÝ POSITION =====
@@ -885,7 +876,40 @@ function processFullVoiceNLP(t) {
             log("📍 Vị trí Z: " + posZ + "mm", 'system');
         }
 
-        // ===== XỬ LÝ CORNER RADIUS =====
+        // ===== XỬ LÝ CORNER RADIUS (CẬP NHẬT RIÊNG TỪNG GÓC) =====
+        // R1
+        var r1Val = extractNumber(str, ['r1', 'r 1']);
+        if (r1Val !== null) { 
+            document.getElementById("r1").value = r1Val; 
+            updatedCount++; 
+            log("⭕ R1: " + r1Val + "mm", 'system');
+        }
+        
+        // R2
+        var r2Val = extractNumber(str, ['r2', 'r 2']);
+        if (r2Val !== null) { 
+            document.getElementById("r2").value = r2Val; 
+            updatedCount++; 
+            log("⭕ R2: " + r2Val + "mm", 'system');
+        }
+        
+        // R3
+        var r3Val = extractNumber(str, ['r3', 'r 3']);
+        if (r3Val !== null) { 
+            document.getElementById("r3").value = r3Val; 
+            updatedCount++; 
+            log("⭕ R3: " + r3Val + "mm", 'system');
+        }
+        
+        // R4
+        var r4Val = extractNumber(str, ['r4', 'r 4']);
+        if (r4Val !== null) { 
+            document.getElementById("r4").value = r4Val; 
+            updatedCount++; 
+            log("⭕ R4: " + r4Val + "mm", 'system');
+        }
+
+        // Tương thích ngược: Nếu người dùng nói chung chung "corner radius 200" mà chưa có R nào được set, set đồng loạt
         var radAll = null;
         var radKeywords = ['corner radius', 'radius', 'bán kính', 'bo góc'];
         var valRad = extractNumber(str, radKeywords);
@@ -893,13 +917,14 @@ function processFullVoiceNLP(t) {
             radAll = valRad;
         }
         
-        if (radAll !== null) { 
+        // Chỉ set đồng loạt nếu R1, R2, R3, R4 chưa bị thay đổi bởi các lệnh riêng lẻ ở trên
+        if (radAll !== null && r1Val === null && r2Val === null && r3Val === null && r4Val === null) { 
             document.getElementById("r1").value = radAll; 
             document.getElementById("r2").value = radAll; 
             document.getElementById("r3").value = radAll; 
             document.getElementById("r4").value = radAll; 
             updatedCount++; 
-            log("⭕ Corner radius: " + radAll + "mm", 'system');
+            log("⭕ Corner radius: " + radAll + "mm (đồng loạt)", 'system');
         }
 
         // ===== XỬ LÝ ORIENTATION =====
@@ -940,8 +965,9 @@ function processFullVoiceNLP(t) {
             var msg = "⚠️ Không nhận diện được thông số. Vui lòng nói rõ:\n" +
                       "- Chiều dài: [số]\n" +
                       "- Chiều rộng: [số]\n" +
-                      "- Độ dày: [số]\n" +
-                      "- Vị trí X/Y/Z: [số]";
+                      "- Chiều cao: [số]\n" +
+                      "- Vị trí X/Y/Z: [số]\n" +
+                      "- R1 / R2 / R3 / R4: [số]";
             log(msg, 'assistant');
         }
     } finally {
@@ -1094,7 +1120,7 @@ function initVoice() {
                     score += 0.3;
                 }
 
-                if (alt.includes("dày") || alt.includes("độ dày")) {
+                if (alt.includes("cao") || alt.includes("chiều cao")) {
                     score += 0.5;
                 }
 
@@ -1427,7 +1453,7 @@ function saveFile() {
     var T = parseInputValue("dz");
 
     if (!(L > 0 && W > 0 && T > 0)) {
-        alert("Please enter Length, Width and Thickness first.");
+        alert("Please enter Length, Width and Height first.");
         return;
     }
 
@@ -1562,7 +1588,7 @@ function draw() {
     if (ORI === "Z") { vX = l; vY = w; vZ = t; } 
     else if (ORI === "X") { vX = t; vY = w; vZ = l; } 
     else if (ORI === "Y") { vX = l; vY = t; vZ = w; }
-    drawBox3D(cx, cy, vX, vY, vZ, 'L=' + L, 'W=' + W, 'T=' + T);
+    drawBox3D(cx, cy, vX, vY, vZ, 'L=' + L, 'W=' + W, 'H=' + T);
 }
 
 function drawAxis() {
