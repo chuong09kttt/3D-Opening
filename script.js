@@ -4,8 +4,6 @@ const ctx = c.getContext("2d");
 let ORI = "Z";
 let isListening = false;
 let recognition = null;
-let silenceTimer = null;
-let partialTranscript = '';
 let isSpeaking = false;
 let hasAutoTriggeredSave = false;
 
@@ -16,7 +14,7 @@ let voiceSessionStarted = false;
 let lastProcessedVoiceText = '';
 let lastProcessedVoiceTime = 0;
 let autoExportLock = false;
-let voiceCommandProcessed = false;
+let isProcessingVoice = false;
 
 // ==================== CONFIGURATION ====================
 const GOOGLE_SHEETS_DATA_URL = 'https://script.google.com/macros/s/AKfycbxjPFKSL9rAAblIPzTQZzAO5JgIPZR8j93isgvBN1UzVYRvqFWi6ujwxzHESUh5AXPk/exec';
@@ -65,11 +63,8 @@ function autoExportMAC() {
         'system'
     );
 
-    // Cho phép một lần export mới khi người dùng
-    // thay đổi thông số hoặc reset
-    setTimeout(function () {
-        autoExportLock = false;
-    }, 1500);
+    // KHÔNG tự động mở khóa - chỉ mở khóa khi người dùng thay đổi thông số
+    // hoặc bấm Reset. Xem phần event listener bên dưới.
 }
 
 // ==================== TOOL DOWNLOAD ====================
@@ -640,312 +635,317 @@ function performSmartSearch(query) {
     return filtered.map(function(item) { return item.doc; });
 }
 
-// ==================== VOICE NLP PROCESSING - 3 LỚP ====================
+// ==================== VOICE NLP PROCESSING ====================
 function processFullVoiceNLP(t) {
     if (!t || t.trim().length < 2) return;
-
-    const normalizedText = t
-        .toLowerCase()
-        .replace(/\s+/g, ' ')
-        .trim();
-
-    const now = Date.now();
-
-    // Chặn cùng một câu được SpeechRecognition
-    // trả về nhiều lần trong khoảng 2 giây
-    if (
-        normalizedText === lastProcessedVoiceText &&
-        (now - lastProcessedVoiceTime) < 2000
-    ) {
-        console.log("Duplicate voice command ignored:", normalizedText);
+    
+    // Chặn xử lý cùng lúc
+    if (isProcessingVoice) {
+        console.log("Voice processing already in progress, ignoring:", t);
         return;
     }
-
-    lastProcessedVoiceText = normalizedText;
-    lastProcessedVoiceTime = now;
-
-    // reset thời gian chờ 30 giây
-    resetVoiceIdleTimer();
-
-    log("👤 " + t, 'user');
-
-    var str = normalizedText;
-    var updatedCount = 0;
     
-    function cleanNumberString(numStr) {
-        if (!numStr) return '0';
-        var cleaned = numStr.replace(/[.,](\d{3})/g, '$1');
-        cleaned = cleaned.replace(/,/g, '.');
-        return cleaned;
-    }
-    
-    // Lớp 1: Trích xuất số với từ khóa
-    function extractNumber(text, keywords) {
-        if (!Array.isArray(keywords)) keywords = [keywords];
-        for (var k = 0; k < keywords.length; k++) {
-            var kw = keywords[k];
-            var patterns = [
-                new RegExp(kw + '\\s*(?:là|:)?\\s*([\\d.,]+)', 'i'),
-                new RegExp(kw + '\\s+([\\d.,]+)', 'i'),
-                new RegExp('([\\d.,]+)\\s*' + kw, 'i'),
-                new RegExp(kw + '\\s*[:=]\\s*([\\d.,]+)', 'i')
-            ];
-            for (var i = 0; i < patterns.length; i++) {
-                var match = text.match(patterns[i]);
-                if (match) {
-                    var num = match[1] || match[2];
-                    if (num) return cleanNumberString(num);
+    isProcessingVoice = true;
+
+    try {
+        const normalizedText = t
+            .toLowerCase()
+            .replace(/\s+/g, ' ')
+            .trim();
+
+        const now = Date.now();
+
+        // Chặn cùng một câu được SpeechRecognition
+        // trả về nhiều lần trong khoảng 3 giây
+        if (
+            normalizedText === lastProcessedVoiceText &&
+            (now - lastProcessedVoiceTime) < 3000
+        ) {
+            console.log("Duplicate voice command ignored:", normalizedText);
+            return;
+        }
+
+        lastProcessedVoiceText = normalizedText;
+        lastProcessedVoiceTime = now;
+
+        // reset thời gian chờ 30 giây
+        resetVoiceIdleTimer();
+
+        log("👤 " + t, 'user');
+
+        var str = normalizedText;
+        var updatedCount = 0;
+        
+        function cleanNumberString(numStr) {
+            if (!numStr) return '0';
+            var cleaned = numStr.replace(/[.,](\d{3})/g, '$1');
+            cleaned = cleaned.replace(/,/g, '.');
+            return cleaned;
+        }
+        
+        // Lớp 1: Trích xuất số với từ khóa
+        function extractNumber(text, keywords) {
+            if (!Array.isArray(keywords)) keywords = [keywords];
+            for (var k = 0; k < keywords.length; k++) {
+                var kw = keywords[k];
+                var patterns = [
+                    new RegExp(kw + '\\s*(?:là|:)?\\s*([\\d.,]+)', 'i'),
+                    new RegExp(kw + '\\s+([\\d.,]+)', 'i'),
+                    new RegExp('([\\d.,]+)\\s*' + kw, 'i'),
+                    new RegExp(kw + '\\s*[:=]\\s*([\\d.,]+)', 'i')
+                ];
+                for (var i = 0; i < patterns.length; i++) {
+                    var match = text.match(patterns[i]);
+                    if (match) {
+                        var num = match[1] || match[2];
+                        if (num) return cleanNumberString(num);
+                    }
                 }
             }
+            return null;
         }
-        return null;
-    }
-    
-    // Lớp 2: Chuẩn hóa và phát hiện từ khóa với ngữ cảnh
-    function detectDimension(text) {
-        var result = { length: null, width: null, thickness: null };
         
-        // Ưu tiên 1: Phát hiện "độ dày" - QUAN TRỌNG NHẤT
-        if (text.includes('độ dày') || text.includes('độ dày là')) {
-            var val = extractNumber(text, ['độ dày', 'độ dày là']);
-            if (val !== null) {
-                result.thickness = val;
-                log("🔍 Lớp 2: Phát hiện 'độ dày' → Thickness = " + val, 'system');
+        // Lớp 2: Chuẩn hóa và phát hiện từ khóa với ngữ cảnh
+        function detectDimension(text) {
+            var result = { length: null, width: null, thickness: null };
+            
+            // Ưu tiên 1: Phát hiện "độ dày" - QUAN TRỌNG NHẤT
+            if (text.includes('độ dày') || text.includes('độ dày là')) {
+                var val = extractNumber(text, ['độ dày', 'độ dày là']);
+                if (val !== null) {
+                    result.thickness = val;
+                    log("🔍 Phát hiện 'độ dày' → Thickness = " + val, 'system');
+                }
             }
-        }
-        
-        // Ưu tiên 2: Phát hiện "độ dài" - CHỈ KHI KHÔNG CÓ "độ dày"
-        if (!text.includes('độ dày') && (text.includes('độ dài') || text.includes('độ dài là'))) {
-            var val = extractNumber(text, ['độ dài', 'độ dài là']);
-            if (val !== null) {
-                result.length = val;
-                log("🔍 Lớp 2: Phát hiện 'độ dài' → Length = " + val, 'system');
+            
+            // Ưu tiên 2: Phát hiện "độ dài" - CHỈ KHI KHÔNG CÓ "độ dày"
+            if (!text.includes('độ dày') && (text.includes('độ dài') || text.includes('độ dài là'))) {
+                var val = extractNumber(text, ['độ dài', 'độ dài là']);
+                if (val !== null) {
+                    result.length = val;
+                    log("🔍 Phát hiện 'độ dài' → Length = " + val, 'system');
+                }
             }
-        }
-        
-        // Ưu tiên 3: "chiều dài"
-        if (result.length === null && (text.includes('chiều dài') || text.includes('chiều dài là'))) {
-            var val = extractNumber(text, ['chiều dài', 'chiều dài là']);
-            if (val !== null) {
-                result.length = val;
-                log("🔍 Lớp 2: Phát hiện 'chiều dài' → Length = " + val, 'system');
+            
+            // Ưu tiên 3: "chiều dài"
+            if (result.length === null && (text.includes('chiều dài') || text.includes('chiều dài là'))) {
+                var val = extractNumber(text, ['chiều dài', 'chiều dài là']);
+                if (val !== null) {
+                    result.length = val;
+                    log("🔍 Phát hiện 'chiều dài' → Length = " + val, 'system');
+                }
             }
-        }
-        
-        // Ưu tiên 4: "chiều rộng"
-        if (result.width === null && (text.includes('chiều rộng') || text.includes('chiều rộng là'))) {
-            var val = extractNumber(text, ['chiều rộng', 'chiều rộng là']);
-            if (val !== null) {
-                result.width = val;
-                log("🔍 Lớp 2: Phát hiện 'chiều rộng' → Width = " + val, 'system');
+            
+            // Ưu tiên 4: "chiều rộng"
+            if (result.width === null && (text.includes('chiều rộng') || text.includes('chiều rộng là'))) {
+                var val = extractNumber(text, ['chiều rộng', 'chiều rộng là']);
+                if (val !== null) {
+                    result.width = val;
+                    log("🔍 Phát hiện 'chiều rộng' → Width = " + val, 'system');
+                }
             }
-        }
-        
-        // Ưu tiên 5: Tìm "dài" nếu chưa có
-        if (result.length === null) {
-            var val = extractNumber(text, ['dài', 'length']);
-            if (val !== null) {
-                result.length = val;
-                log("🔍 Lớp 2: Phát hiện 'dài' → Length = " + val, 'system');
+            
+            // Ưu tiên 5: Tìm "dài" nếu chưa có
+            if (result.length === null) {
+                var val = extractNumber(text, ['dài', 'length']);
+                if (val !== null) {
+                    result.length = val;
+                    log("🔍 Phát hiện 'dài' → Length = " + val, 'system');
+                }
             }
-        }
-        
-        // Ưu tiên 6: Tìm "rộng" nếu chưa có
-        if (result.width === null) {
-            var val = extractNumber(text, ['rộng', 'width']);
-            if (val !== null) {
-                result.width = val;
-                log("🔍 Lớp 2: Phát hiện 'rộng' → Width = " + val, 'system');
+            
+            // Ưu tiên 6: Tìm "rộng" nếu chưa có
+            if (result.width === null) {
+                var val = extractNumber(text, ['rộng', 'width']);
+                if (val !== null) {
+                    result.width = val;
+                    log("🔍 Phát hiện 'rộng' → Width = " + val, 'system');
+                }
             }
-        }
-        
-        // Ưu tiên 7: Tìm "dày" nếu chưa có
-        if (result.thickness === null) {
-            var val = extractNumber(text, ['dày', 'thickness', 'height', 'cao', 'chiều cao']);
-            if (val !== null) {
-                result.thickness = val;
-                log("🔍 Lớp 2: Phát hiện 'dày' → Thickness = " + val, 'system');
+            
+            // Ưu tiên 7: Tìm "dày" nếu chưa có
+            if (result.thickness === null) {
+                var val = extractNumber(text, ['dày', 'thickness', 'height', 'cao', 'chiều cao']);
+                if (val !== null) {
+                    result.thickness = val;
+                    log("🔍 Phát hiện 'dày' → Thickness = " + val, 'system');
+                }
             }
+            
+            return result;
         }
         
-        return result;
-    }
-    
-    // Lớp 3: Xác định theo ngữ cảnh (Context)
-    function applyContext(dim, text) {
-        // Nếu có cả 3 thông số, không cần xử lý thêm
-        if (dim.length !== null && dim.width !== null && dim.thickness !== null) {
+        // Lớp 3: Xác định theo ngữ cảnh (Context)
+        function applyContext(dim, text) {
+            // Nếu có cả 3 thông số, không cần xử lý thêm
+            if (dim.length !== null && dim.width !== null && dim.thickness !== null) {
+                return dim;
+            }
+            
+            // Nếu chỉ có 2 thông số, thử suy luận thông số còn lại
+            var numbers = text.match(/\b\d+[.,]?\d*\b/g);
+            if (numbers && numbers.length > 0) {
+                var numValues = numbers.map(function(n) { return parseFloat(n.replace(',', '.')); });
+                
+                // Nếu thiếu length và có số lớn nhất
+                if (dim.length === null && numValues.length > 0) {
+                    var maxVal = Math.max.apply(null, numValues);
+                    if (dim.width !== maxVal && dim.thickness !== maxVal) {
+                        dim.length = maxVal;
+                        log("🔍 Suy luận Length = " + maxVal + " (số lớn nhất)", 'system');
+                    }
+                }
+            }
+            
             return dim;
         }
         
-        // Nếu chỉ có 2 thông số, thử suy luận thông số còn lại
-        var numbers = text.match(/\b\d+[.,]?\d*\b/g);
-        if (numbers && numbers.length > 0) {
-            var numValues = numbers.map(function(n) { return parseFloat(n.replace(',', '.')); });
-            
-            // Nếu thiếu length và có số lớn nhất
-            if (dim.length === null && numValues.length > 0) {
-                var maxVal = Math.max.apply(null, numValues);
-                if (dim.width !== maxVal && dim.thickness !== maxVal) {
-                    dim.length = maxVal;
-                    log("🔍 Lớp 3: Suy luận Length = " + maxVal + " (số lớn nhất)", 'system');
+        // ===== XỬ LÝ TÌM KIẾM TRONG LIBRARY =====
+        if (str.match(/search\s+(?:for\s+)?(.+)/i) || str.match(/tìm\s+(?:kiếm\s+)?(.+)/i)) {
+            var searchQuery = str.replace(/search\s+(?:for\s+)?/i, '').replace(/tìm\s+(?:kiếm\s+)?/i, '').trim();
+            if (searchQuery && searchQuery.length > 1) {
+                document.getElementById('searchQuery').value = searchQuery;
+                var results = performSmartSearch(searchQuery);
+                if (results.length > 0) { 
+                    var bestMatch = results[0]; 
+                    if (bestMatch && bestMatch.link) { 
+                        if (bestMatch.link.indexOf('http://') === 0 || bestMatch.link.indexOf('https://') === 0) {
+                            window.open(bestMatch.link, '_blank'); 
+                        }
+                    } 
+                    searchDocuments(); 
+                } else {
+                    searchDocuments();
                 }
+                var modal = document.getElementById('libraryModal');
+                if (!modal.classList.contains('active')) openLibrary();
             }
+            return;
+        }
+
+        // ===== XỬ LÝ LƯU FILE =====
+        if (str.match(/save\s*(?:file|document)?/i) || str.match(/export\s*file/i) || str.match(/lưu\s*(?:file|tài liệu)?/i)) { 
+            autoExportMAC();
+            return; 
+        }
+
+        // ===== LỚP 1 + 2 + 3: XỬ LÝ THÔNG SỐ =====
+        var dim = detectDimension(str);
+        dim = applyContext(dim, str);
+        
+        var len = dim.length;
+        var wid = dim.width;
+        var hei = dim.thickness;
+        
+        // Cập nhật giá trị
+        if (len !== null) { 
+            document.getElementById("dx").value = len; 
+            updatedCount++; 
+            log("📏 Chiều dài: " + len + "mm", 'system');
+        }
+        if (wid !== null) { 
+            document.getElementById("dy").value = wid; 
+            updatedCount++; 
+            log("📐 Chiều rộng: " + wid + "mm", 'system');
+        }
+        if (hei !== null) { 
+            document.getElementById("dz").value = hei; 
+            updatedCount++; 
+            log("📏 Độ dày: " + hei + "mm", 'system');
+        }
+
+        // ===== XỬ LÝ POSITION =====
+        var posX = null, posY = null, posZ = null;
+        
+        var posKeywordsX = ['vị trí x', 'position x', 'pos x', 'x =', 'x là', 'x='];
+        var valX = extractNumber(str, posKeywordsX);
+        if (valX !== null) { posX = valX; }
+        
+        var posKeywordsY = ['vị trí y', 'position y', 'pos y', 'y =', 'y là', 'y='];
+        var valY = extractNumber(str, posKeywordsY);
+        if (valY !== null) { posY = valY; }
+        
+        var posKeywordsZ = ['vị trí z', 'position z', 'pos z', 'z =', 'z là', 'z='];
+        var valZ = extractNumber(str, posKeywordsZ);
+        if (valZ !== null) { posZ = valZ; }
+
+        if (posX !== null) { 
+            document.getElementById("px").value = posX; 
+            updatedCount++; 
+            log("📍 Vị trí X: " + posX + "mm", 'system');
+        }
+        if (posY !== null) { 
+            document.getElementById("py").value = posY; 
+            updatedCount++; 
+            log("📍 Vị trí Y: " + posY + "mm", 'system');
+        }
+        if (posZ !== null) { 
+            document.getElementById("pz").value = posZ; 
+            updatedCount++; 
+            log("📍 Vị trí Z: " + posZ + "mm", 'system');
+        }
+
+        // ===== XỬ LÝ CORNER RADIUS =====
+        var radAll = null;
+        var radKeywords = ['corner radius', 'radius', 'bán kính', 'bo góc'];
+        var valRad = extractNumber(str, radKeywords);
+        if (valRad !== null) { 
+            radAll = valRad;
         }
         
-        return dim;
-    }
-    
-    // ===== XỬ LÝ TÌM KIẾM TRONG LIBRARY =====
-    if (str.match(/search\s+(?:for\s+)?(.+)/i) || str.match(/tìm\s+(?:kiếm\s+)?(.+)/i)) {
-        var searchQuery = str.replace(/search\s+(?:for\s+)?/i, '').replace(/tìm\s+(?:kiếm\s+)?/i, '').trim();
-        if (searchQuery && searchQuery.length > 1) {
-            document.getElementById('searchQuery').value = searchQuery;
-            var results = performSmartSearch(searchQuery);
-            if (results.length > 0) { 
-                var bestMatch = results[0]; 
-                if (bestMatch && bestMatch.link) { 
-                    if (bestMatch.link.indexOf('http://') === 0 || bestMatch.link.indexOf('https://') === 0) {
-                        window.open(bestMatch.link, '_blank'); 
-                    }
-                } 
-                searchDocuments(); 
-            } else {
-                searchDocuments();
-            }
-            var modal = document.getElementById('libraryModal');
-            if (!modal.classList.contains('active')) openLibrary();
+        if (radAll !== null) { 
+            document.getElementById("r1").value = radAll; 
+            document.getElementById("r2").value = radAll; 
+            document.getElementById("r3").value = radAll; 
+            document.getElementById("r4").value = radAll; 
+            updatedCount++; 
+            log("⭕ Corner radius: " + radAll + "mm", 'system');
         }
-        return;
-    }
 
-    // ===== XỬ LÝ LƯU FILE =====
-    if (str.match(/save\s*(?:file|document)?/i) || str.match(/export\s*file/i) || str.match(/lưu\s*(?:file|tài liệu)?/i)) { 
-        autoExportMAC();
-        return; 
-    }
-
-    // ===== LỚP 1 + 2 + 3: XỬ LÝ THÔNG SỐ =====
-    var dim = detectDimension(str);
-    dim = applyContext(dim, str);
-    
-    var len = dim.length;
-    var wid = dim.width;
-    var hei = dim.thickness;
-    
-    // Cập nhật giá trị
-    if (len !== null) { 
-        document.getElementById("dx").value = len; 
-        updatedCount++; 
-        log("📏 Chiều dài: " + len + "mm", 'system');
-    }
-    if (wid !== null) { 
-        document.getElementById("dy").value = wid; 
-        updatedCount++; 
-        log("📐 Chiều rộng: " + wid + "mm", 'system');
-    }
-    if (hei !== null) { 
-        document.getElementById("dz").value = hei; 
-        updatedCount++; 
-        log("📏 Độ dày: " + hei + "mm", 'system');
-    }
-
-    // ===== XỬ LÝ POSITION =====
-    var posX = null, posY = null, posZ = null;
-    
-    var posKeywordsX = ['vị trí x', 'position x', 'pos x', 'x =', 'x là', 'x='];
-    var valX = extractNumber(str, posKeywordsX);
-    if (valX !== null) { posX = valX; }
-    
-    var posKeywordsY = ['vị trí y', 'position y', 'pos y', 'y =', 'y là', 'y='];
-    var valY = extractNumber(str, posKeywordsY);
-    if (valY !== null) { posY = valY; }
-    
-    var posKeywordsZ = ['vị trí z', 'position z', 'pos z', 'z =', 'z là', 'z='];
-    var valZ = extractNumber(str, posKeywordsZ);
-    if (valZ !== null) { posZ = valZ; }
-
-    if (posX !== null) { 
-        document.getElementById("px").value = posX; 
-        updatedCount++; 
-        log("📍 Vị trí X: " + posX + "mm", 'system');
-    }
-    if (posY !== null) { 
-        document.getElementById("py").value = posY; 
-        updatedCount++; 
-        log("📍 Vị trí Y: " + posY + "mm", 'system');
-    }
-    if (posZ !== null) { 
-        document.getElementById("pz").value = posZ; 
-        updatedCount++; 
-        log("📍 Vị trí Z: " + posZ + "mm", 'system');
-    }
-
-    // ===== XỬ LÝ CORNER RADIUS =====
-    var radAll = null;
-    var radKeywords = ['corner radius', 'radius', 'bán kính', 'bo góc'];
-    var valRad = extractNumber(str, radKeywords);
-    if (valRad !== null) { 
-        radAll = valRad;
-    }
-    
-    if (radAll !== null) { 
-        document.getElementById("r1").value = radAll; 
-        document.getElementById("r2").value = radAll; 
-        document.getElementById("r3").value = radAll; 
-        document.getElementById("r4").value = radAll; 
-        updatedCount++; 
-        log("⭕ Corner radius: " + radAll + "mm", 'system');
-    }
-
-    // ===== XỬ LÝ ORIENTATION =====
-    if (str.match(/orientation\s*x/i) || str.match(/axis\s*x/i) || str.match(/trục\s*x/i)) { 
-        setOri('X'); 
-        updatedCount++; 
-        log("🔄 Orientation: X", 'system');
-    }
-    else if (str.match(/orientation\s*y/i) || str.match(/axis\s*y/i) || str.match(/trục\s*y/i)) { 
-        setOri('Y'); 
-        updatedCount++; 
-        log("🔄 Orientation: Y", 'system');
-    }
-    else if (str.match(/orientation\s*z/i) || str.match(/axis\s*z/i) || str.match(/trục\s*z/i)) { 
-        setOri('Z'); 
-        updatedCount++; 
-        log("🔄 Orientation: Z", 'system');
-    }
-
-    // ===== THÔNG BÁO KẾT QUẢ =====
-    if (updatedCount > 0) {
-        draw();
-        var msg = "✅ Đã cập nhật " + updatedCount + " thông số!";
-        log(msg, 'assistant');
-
-        // Không đọc thông báo dài bằng giọng nói
-        // để tránh Speech Recognition nghe lại chính TTS.
-        // speak(msg);
-
-        // Tự động xuất MAC nếu đủ L/W/T
-        const L = parseInputValue("dx");
-        const W = parseInputValue("dy");
-        const T = parseInputValue("dz");
-
-        if (L > 0 && W > 0 && T > 0) {
-            // Export đúng 1 lần
-            if (!autoExportLock) {
-                autoExportMAC();
-            }
+        // ===== XỬ LÝ ORIENTATION =====
+        if (str.match(/orientation\s*x/i) || str.match(/axis\s*x/i) || str.match(/trục\s*x/i)) { 
+            setOri('X'); 
+            updatedCount++; 
+            log("🔄 Orientation: X", 'system');
         }
-    } else {
-        var msg = "⚠️ Không nhận diện được thông số. Vui lòng nói rõ:\n" +
-                  "- Chiều dài: [số]\n" +
-                  "- Chiều rộng: [số]\n" +
-                  "- Độ dày: [số]\n" +
-                  "- Vị trí X/Y/Z: [số]";
-        log(msg, 'assistant');
+        else if (str.match(/orientation\s*y/i) || str.match(/axis\s*y/i) || str.match(/trục\s*y/i)) { 
+            setOri('Y'); 
+            updatedCount++; 
+            log("🔄 Orientation: Y", 'system');
+        }
+        else if (str.match(/orientation\s*z/i) || str.match(/axis\s*z/i) || str.match(/trục\s*z/i)) { 
+            setOri('Z'); 
+            updatedCount++; 
+            log("🔄 Orientation: Z", 'system');
+        }
 
-        // Không speak để tránh vòng lặp
-        // speak("Không nhận diện được thông số. Vui lòng thử lại.");
+        // ===== THÔNG BÁO KẾT QUẢ =====
+        if (updatedCount > 0) {
+            draw();
+            var msg = "✅ Đã cập nhật " + updatedCount + " thông số!";
+            log(msg, 'assistant');
+
+            // Tự động xuất MAC nếu đủ L/W/T
+            const L = parseInputValue("dx");
+            const W = parseInputValue("dy");
+            const T = parseInputValue("dz");
+
+            if (L > 0 && W > 0 && T > 0) {
+                // Export đúng 1 lần - kiểm tra autoExportLock
+                if (!autoExportLock) {
+                    autoExportMAC();
+                }
+            }
+        } else {
+            var msg = "⚠️ Không nhận diện được thông số. Vui lòng nói rõ:\n" +
+                      "- Chiều dài: [số]\n" +
+                      "- Chiều rộng: [số]\n" +
+                      "- Độ dày: [số]\n" +
+                      "- Vị trí X/Y/Z: [số]";
+            log(msg, 'assistant');
+        }
+    } finally {
+        isProcessingVoice = false;
     }
 }
 
@@ -954,6 +954,7 @@ function processFullVoiceNLP(t) {
 function resetVoiceIdleTimer() {
     if (voiceIdleTimer) {
         clearTimeout(voiceIdleTimer);
+        voiceIdleTimer = null;
     }
 
     if (!isListening) return;
@@ -963,13 +964,12 @@ function resetVoiceIdleTimer() {
 
         console.log("Voice idle timeout - stopping.");
 
-        // Không speak()
-        // Không log cảnh báo bằng âm thanh
+        // Tắt Voice im lặng, không phát âm thanh
         stopVoice(true);
     }, VOICE_IDLE_TIMEOUT);
 }
 
-// ==================== VOICE RECOGNITION - maxAlternatives = 5 ====================
+// ==================== VOICE RECOGNITION ====================
 function initVoice() {
     var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) { 
@@ -980,8 +980,8 @@ function initVoice() {
     var r = new SR();
     r.lang = "vi-VN"; 
     r.continuous = true; 
-    r.interimResults = true;
-    r.maxAlternatives = 5; // Tăng lên 5 để có nhiều lựa chọn
+    r.interimResults = false; // CHỈ xử lý final result
+    r.maxAlternatives = 5;
     
     r.onstart = function() {
         isListening = true;
@@ -989,8 +989,12 @@ function initVoice() {
         document.getElementById('voiceBtn').classList.add('listening');
         document.getElementById('chatStatus').textContent = '● Listening...';
         document.getElementById('chatStatus').classList.add('waiting');
-        partialTranscript = '';
-        hasAutoTriggeredSave = false;
+        
+        // Chỉ reset autoExportLock khi bắt đầu phiên Voice MỚI
+        if (!voiceSessionStarted) {
+            autoExportLock = false;
+            hasAutoTriggeredSave = false;
+        }
 
         // Chỉ nói lời chào MỘT LẦN cho mỗi phiên Voice
         if (!voiceSessionStarted) {
@@ -1006,12 +1010,13 @@ function initVoice() {
     };
     
     r.onend = function() {
+        // Nếu không còn lắng nghe thì thoát
         if (!isListening) {
             return;
         }
 
-        // Nếu vẫn đang trong phiên Voice,
-        // chỉ restart recognition, KHÔNG nói greeting lại.
+        // Chỉ restart recognition, KHÔNG reset voiceSessionStarted
+        // KHÔNG nói greeting lại
         try {
             setTimeout(function() {
                 if (!isListening || !recognition) {
@@ -1021,10 +1026,13 @@ function initVoice() {
                     recognition.start();
                 } catch (e) {
                     console.log("Recognition restart skipped:", e);
+                    // Nếu không restart được, tắt Voice
+                    stopVoice(true);
                 }
             }, 300);
         } catch (e) {
             console.log("Restart error:", e);
+            stopVoice(true);
         }
     };
     
@@ -1035,6 +1043,7 @@ function initVoice() {
             log("❌ Microphone access denied", 'system'); 
             stopVoice(true); 
         } else if (e.error === 'no-speech') {
+            // Không làm gì, tiếp tục chờ
             return;
         } else if (e.error === 'audio-capture') {
             log("⚠️ No microphone found", 'system');
@@ -1050,6 +1059,14 @@ function initVoice() {
             }
         } else {
             log("⚠️ Voice error: " + e.error, 'system');
+            // Với lỗi khác, thử restart
+            if (isListening && recognition) {
+                try {
+                    recognition.start();
+                } catch(e) {
+                    console.log("Restart after error failed:", e);
+                }
+            }
         }
     };
     
@@ -1059,6 +1076,9 @@ function initVoice() {
         let finalText = '';
 
         for (let i = e.resultIndex; i < e.results.length; i++) {
+            // Chỉ xử lý final results
+            if (!e.results[i].isFinal) continue;
+            
             let bestTranscript = '';
             let bestScore = -1;
 
@@ -1084,7 +1104,7 @@ function initVoice() {
                 }
             }
 
-            if (e.results[i].isFinal) {
+            if (bestTranscript) {
                 finalText += bestTranscript + " ";
             }
         }
@@ -1095,7 +1115,7 @@ function initVoice() {
             return;
         }
 
-        // Chỉ xử lý FINAL result
+        // Xử lý kết quả final
         processFullVoiceNLP(finalText);
 
         // Reset thời gian chờ
@@ -1130,9 +1150,8 @@ function voice() {
     lastProcessedVoiceText = '';
     lastProcessedVoiceTime = 0;
 
-    // reset export
-    autoExportLock = false;
-    hasAutoTriggeredSave = false;
+    // reset processing flag
+    isProcessingVoice = false;
 
     resetVoiceIdleTimer();
 
@@ -1171,11 +1190,6 @@ function stopVoice(silent) {
         voiceIdleTimer = null;
     }
 
-    if (silenceTimer) {
-        clearTimeout(silenceTimer);
-        silenceTimer = null;
-    }
-
     if (recognition) {
         try {
             recognition.stop();
@@ -1195,16 +1209,13 @@ function stopVoice(silent) {
         chatStatus.classList.remove('waiting');
     }
 
-    partialTranscript = '';
-
     // Chỉ log khi người dùng chủ động Stop
-    // hoặc khi cần thông báo thông thường
     if (!silent) {
         log("🔇 Stopped listening", 'system');
     }
 }
 
-// ==================== LIBRARY VOICE SEARCH - maxAlternatives = 5 ====================
+// ==================== LIBRARY VOICE SEARCH ====================
 function voiceSearchLibrary() {
     if (isLibraryVoiceListening) {
         stopLibraryVoice();
@@ -1275,7 +1286,6 @@ function voiceSearchLibrary() {
             var isVietnamese = false;
             
             for (var i = e.resultIndex; i < e.results.length; i++) {
-                // Lấy kết quả tốt nhất
                 var bestTranscript = '';
                 var bestScore = -1;
                 
@@ -1793,6 +1803,7 @@ var inputs = document.querySelectorAll("input");
 for (var i = 0; i < inputs.length; i++) {
     inputs[i].addEventListener("input", function() { 
         hasAutoTriggeredSave = false; 
+        // Mở khóa export khi người dùng thay đổi thông số
         autoExportLock = false;
         draw(); 
     });
