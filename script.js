@@ -9,6 +9,15 @@ let partialTranscript = '';
 let isSpeaking = false;
 let hasAutoTriggeredSave = false;
 
+// ==================== VOICE SESSION CONTROL ====================
+const VOICE_IDLE_TIMEOUT = 30000; // 30 seconds
+let voiceIdleTimer = null;
+let voiceSessionStarted = false;
+let lastProcessedVoiceText = '';
+let lastProcessedVoiceTime = 0;
+let autoExportLock = false;
+let voiceCommandProcessed = false;
+
 // ==================== CONFIGURATION ====================
 const GOOGLE_SHEETS_DATA_URL = 'https://script.google.com/macros/s/AKfycbxjPFKSL9rAAblIPzTQZzAO5JgIPZR8j93isgvBN1UzVYRvqFWi6ujwxzHESUh5AXPk/exec';
 const TOOL_DOWNLOAD_URL = 'https://drive.google.com/file/d/14NNDzXSCG63m1yQZb51tZhrZfd5k8KPf/view';
@@ -26,6 +35,42 @@ let libraryVoiceRecognition = null;
 let isLibraryVoiceListening = false;
 let recognitionRestartAttempts = 0;
 const MAX_RESTART_ATTEMPTS = 3;
+
+// ==================== AUTO EXPORT ====================
+
+function autoExportMAC() {
+    if (autoExportLock) return;
+
+    const L = parseInputValue("dx");
+    const W = parseInputValue("dy");
+    const T = parseInputValue("dz");
+
+    // Chỉ export khi đủ 3 thông số
+    if (!(L > 0 && W > 0 && T > 0)) {
+        return;
+    }
+
+    // Khóa ngay lập tức để không thể export lần 2
+    autoExportLock = true;
+    hasAutoTriggeredSave = true;
+
+    const fileName = "Opening_" + L + "x" + W + "x" + T;
+
+    console.log("AUTO EXPORT:", fileName);
+
+    generateAndDownloadFile(fileName);
+
+    log(
+        "💾 Auto exported: " + fileName + ".mac",
+        'system'
+    );
+
+    // Cho phép một lần export mới khi người dùng
+    // thay đổi thông số hoặc reset
+    setTimeout(function () {
+        autoExportLock = false;
+    }, 1500);
+}
 
 // ==================== TOOL DOWNLOAD ====================
 function open3DOpeningTool() {
@@ -598,8 +643,33 @@ function performSmartSearch(query) {
 // ==================== VOICE NLP PROCESSING - 3 LỚP ====================
 function processFullVoiceNLP(t) {
     if (!t || t.trim().length < 2) return;
+
+    const normalizedText = t
+        .toLowerCase()
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    const now = Date.now();
+
+    // Chặn cùng một câu được SpeechRecognition
+    // trả về nhiều lần trong khoảng 2 giây
+    if (
+        normalizedText === lastProcessedVoiceText &&
+        (now - lastProcessedVoiceTime) < 2000
+    ) {
+        console.log("Duplicate voice command ignored:", normalizedText);
+        return;
+    }
+
+    lastProcessedVoiceText = normalizedText;
+    lastProcessedVoiceTime = now;
+
+    // reset thời gian chờ 30 giây
+    resetVoiceIdleTimer();
+
     log("👤 " + t, 'user');
-    var str = t.toLowerCase().trim();
+
+    var str = normalizedText;
     var updatedCount = 0;
     
     function cleanNumberString(numStr) {
@@ -734,7 +804,7 @@ function processFullVoiceNLP(t) {
             var results = performSmartSearch(searchQuery);
             if (results.length > 0) { 
                 var bestMatch = results[0]; 
-                if (bestMatch.link) { 
+                if (bestMatch && bestMatch.link) { 
                     if (bestMatch.link.indexOf('http://') === 0 || bestMatch.link.indexOf('https://') === 0) {
                         window.open(bestMatch.link, '_blank'); 
                     }
@@ -751,7 +821,7 @@ function processFullVoiceNLP(t) {
 
     // ===== XỬ LÝ LƯU FILE =====
     if (str.match(/save\s*(?:file|document)?/i) || str.match(/export\s*file/i) || str.match(/lưu\s*(?:file|tài liệu)?/i)) { 
-        autoSaveDialog(); 
+        autoExportMAC();
         return; 
     }
 
@@ -846,21 +916,57 @@ function processFullVoiceNLP(t) {
     }
 
     // ===== THÔNG BÁO KẾT QUẢ =====
-    if (updatedCount > 0) { 
-        draw(); 
+    if (updatedCount > 0) {
+        draw();
         var msg = "✅ Đã cập nhật " + updatedCount + " thông số!";
         log(msg, 'assistant');
-        speak(msg);
-        autoSaveDialog(); 
-    } else { 
+
+        // Không đọc thông báo dài bằng giọng nói
+        // để tránh Speech Recognition nghe lại chính TTS.
+        // speak(msg);
+
+        // Tự động xuất MAC nếu đủ L/W/T
+        const L = parseInputValue("dx");
+        const W = parseInputValue("dy");
+        const T = parseInputValue("dz");
+
+        if (L > 0 && W > 0 && T > 0) {
+            // Export đúng 1 lần
+            if (!autoExportLock) {
+                autoExportMAC();
+            }
+        }
+    } else {
         var msg = "⚠️ Không nhận diện được thông số. Vui lòng nói rõ:\n" +
                   "- Chiều dài: [số]\n" +
                   "- Chiều rộng: [số]\n" +
                   "- Độ dày: [số]\n" +
                   "- Vị trí X/Y/Z: [số]";
         log(msg, 'assistant');
-        speak("Không nhận diện được thông số. Vui lòng thử lại.");
+
+        // Không speak để tránh vòng lặp
+        // speak("Không nhận diện được thông số. Vui lòng thử lại.");
     }
+}
+
+// ==================== VOICE IDLE TIMER ====================
+
+function resetVoiceIdleTimer() {
+    if (voiceIdleTimer) {
+        clearTimeout(voiceIdleTimer);
+    }
+
+    if (!isListening) return;
+
+    voiceIdleTimer = setTimeout(function () {
+        if (!isListening) return;
+
+        console.log("Voice idle timeout - stopping.");
+
+        // Không speak()
+        // Không log cảnh báo bằng âm thanh
+        stopVoice(true);
+    }, VOICE_IDLE_TIMEOUT);
 }
 
 // ==================== VOICE RECOGNITION - maxAlternatives = 5 ====================
@@ -883,41 +989,42 @@ function initVoice() {
         document.getElementById('voiceBtn').classList.add('listening');
         document.getElementById('chatStatus').textContent = '● Listening...';
         document.getElementById('chatStatus').classList.add('waiting');
-        log("🎤 Listening...", 'system');
-        
-        var greeting = "Xin chào, bạn hãy đọc các thông số kích thước nhé";
-        log("🤖 " + greeting, 'assistant');
-        speak(greeting);
-        partialTranscript = ''; 
+        partialTranscript = '';
         hasAutoTriggeredSave = false;
+
+        // Chỉ nói lời chào MỘT LẦN cho mỗi phiên Voice
+        if (!voiceSessionStarted) {
+            voiceSessionStarted = true;
+            log("🎤 Voice activated. Speak your command.", 'system');
+            const greeting = "Xin chào, bạn hãy đọc các thông số kích thước nhé";
+            log("🤖 " + greeting, 'assistant');
+            speak(greeting);
+        }
+
+        // Bắt đầu bộ đếm 30 giây
+        resetVoiceIdleTimer();
     };
     
     r.onend = function() {
         if (!isListening) {
-            document.getElementById('voiceBtn').classList.remove('listening'); 
-            document.getElementById('chatStatus').textContent = '● Ready'; 
-            document.getElementById('chatStatus').classList.remove('waiting');
             return;
         }
-        
-        if (isListening && recognitionRestartAttempts < MAX_RESTART_ATTEMPTS) {
-            recognitionRestartAttempts++;
-            try {
-                setTimeout(function() {
-                    if (isListening && recognition) {
-                        try {
-                            recognition.start();
-                        } catch(e) {
-                            console.log('Restart attempt failed:', e);
-                        }
-                    }
-                }, 300);
-            } catch(e) {
-                console.log('Restart error:', e);
-            }
-        } else if (recognitionRestartAttempts >= MAX_RESTART_ATTEMPTS) {
-            log("⚠️ Voice recognition stopped after multiple attempts", 'system');
-            stopVoice();
+
+        // Nếu vẫn đang trong phiên Voice,
+        // chỉ restart recognition, KHÔNG nói greeting lại.
+        try {
+            setTimeout(function() {
+                if (!isListening || !recognition) {
+                    return;
+                }
+                try {
+                    recognition.start();
+                } catch (e) {
+                    console.log("Recognition restart skipped:", e);
+                }
+            }, 300);
+        } catch (e) {
+            console.log("Restart error:", e);
         }
     };
     
@@ -926,12 +1033,12 @@ function initVoice() {
         
         if (e.error === 'not-allowed') { 
             log("❌ Microphone access denied", 'system'); 
-            stopVoice(); 
+            stopVoice(true); 
         } else if (e.error === 'no-speech') {
             return;
         } else if (e.error === 'audio-capture') {
             log("⚠️ No microphone found", 'system');
-            stopVoice();
+            stopVoice(true);
         } else if (e.error === 'network') {
             log("⚠️ Network error, retrying...", 'system');
             if (isListening) {
@@ -947,143 +1054,154 @@ function initVoice() {
     };
     
     r.onresult = function(e) {
-        if (silenceTimer) { 
-            clearTimeout(silenceTimer); 
-            silenceTimer = null; 
-        }
-        
-        var finalText = '', interimText = '';
-        
-        for (var i = e.resultIndex; i < e.results.length; i++) {
-            // Lấy tất cả các alternatives
-            var bestTranscript = '';
-            var bestScore = -1;
-            
-            for (var j = 0; j < e.results[i].length; j++) {
-                var alt = e.results[i][j].transcript.trim();
-                var confidence = e.results[i][j].confidence || 0;
-                
-                // Ưu tiên kết quả có dấu tiếng Việt và có từ khóa "độ dày"
-                var hasVietnamese = /[áàảãạăắằẳẵặâấầẩẫậđéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵ]/i.test(alt);
-                var hasDay = alt.includes('dày') || alt.includes('độ dày');
-                var hasDai = alt.includes('dài') || alt.includes('độ dài');
-                
-                // Tăng điểm cho kết quả có "độ dày"
-                var score = confidence;
-                if (hasVietnamese) score += 0.3;
-                if (hasDay) score += 0.5; // Ưu tiên cao cho "độ dày"
-                if (hasDai && !hasDay) score += 0.1;
-                
+        resetVoiceIdleTimer();
+
+        let finalText = '';
+
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+            let bestTranscript = '';
+            let bestScore = -1;
+
+            for (let j = 0; j < e.results[i].length; j++) {
+                const alt = e.results[i][j].transcript.trim();
+                const confidence = e.results[i][j].confidence || 0;
+
+                let score = confidence;
+
+                const hasVietnamese = /[áàảãạăắằẳẵâấầẩẫậđéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵ]/i.test(alt);
+
+                if (hasVietnamese) {
+                    score += 0.3;
+                }
+
+                if (alt.includes("dày") || alt.includes("độ dày")) {
+                    score += 0.5;
+                }
+
                 if (score > bestScore) {
                     bestScore = score;
                     bestTranscript = alt;
                 }
             }
-            
+
             if (e.results[i].isFinal) {
-                finalText += bestTranscript + ' ';
-            } else {
-                interimText += bestTranscript + ' ';
+                finalText += bestTranscript + " ";
             }
         }
-        
-        if (finalText) { 
-            partialTranscript += finalText; 
-            var text = partialTranscript.trim();
-            if (text) {
-                processFullVoiceNLP(text); 
-            }
-            partialTranscript = ''; 
-        } else if (interimText) { 
-            document.getElementById('chatStatus').textContent = '● Speaking...'; 
-            partialTranscript = interimText.trim(); 
+
+        finalText = finalText.trim();
+
+        if (!finalText) {
+            return;
         }
-        
-        silenceTimer = setTimeout(function() { 
-            if (isListening && partialTranscript) { 
-                var text = partialTranscript.trim();
-                if (text) {
-                    processFullVoiceNLP(text); 
-                }
-                partialTranscript = ''; 
-            } 
-        }, 3000);
+
+        // Chỉ xử lý FINAL result
+        processFullVoiceNLP(finalText);
+
+        // Reset thời gian chờ
+        resetVoiceIdleTimer();
     };
     
     return r;
 }
 
 function voice() {
-    if (isListening) { 
-        stopVoice(); 
-        return; 
+    if (isListening) {
+        stopVoice(false);
+        voiceSessionStarted = false;
+        return;
     }
-    
-    if (!recognition) { 
-        recognition = initVoice(); 
+
+    if (!recognition) {
+        recognition = initVoice();
         if (!recognition) {
             alert("❌ Your browser does not support voice recognition. Please use Chrome or Edge.");
             return;
         }
     }
-    
+
     recognitionRestartAttempts = 0;
     isListening = true;
-    
+
+    // Bắt đầu một phiên Voice mới
+    voiceSessionStarted = false;
+
+    // reset duplicate protection
+    lastProcessedVoiceText = '';
+    lastProcessedVoiceTime = 0;
+
+    // reset export
+    autoExportLock = false;
+    hasAutoTriggeredSave = false;
+
+    resetVoiceIdleTimer();
+
     try {
         recognition.start();
-    } catch(e) {
-        console.log('Start error:', e);
-        if (e.name === 'InvalidStateError') {
+    } catch (e) {
+        console.log("Start error:", e);
+        if (e.name === "InvalidStateError") {
             try {
                 recognition.stop();
                 setTimeout(function() {
-                    try {
-                        if (recognition && isListening) {
+                    if (recognition && isListening) {
+                        try {
                             recognition.start();
+                        } catch (e2) {
+                            console.log("Retry start error:", e2);
+                            stopVoice(true);
                         }
-                    } catch(e2) {
-                        console.log('Retry start error:', e2);
-                        isListening = false;
-                        document.getElementById('voiceBtn').classList.remove('listening');
-                        document.getElementById('chatStatus').textContent = '● Ready';
-                        document.getElementById('chatStatus').classList.remove('waiting');
-                        log("⚠️ Could not start voice recognition", 'system');
                     }
-                }, 500);
-            } catch(e2) {
-                console.log('Stop error:', e2);
-                isListening = false;
+                }, 300);
+            } catch (e2) {
+                stopVoice(true);
             }
         } else {
-            isListening = false;
-            log("⚠️ Could not start voice recognition: " + e.message, 'system');
+            stopVoice(true);
         }
     }
 }
 
-function stopVoice() {
+function stopVoice(silent) {
     isListening = false;
     recognitionRestartAttempts = 0;
-    
-    if (silenceTimer) { 
-        clearTimeout(silenceTimer); 
-        silenceTimer = null; 
+
+    if (voiceIdleTimer) {
+        clearTimeout(voiceIdleTimer);
+        voiceIdleTimer = null;
     }
-    
-    if (recognition) { 
-        try { 
-            recognition.stop(); 
-        } catch(e) {
-            console.log('Stop error:', e);
+
+    if (silenceTimer) {
+        clearTimeout(silenceTimer);
+        silenceTimer = null;
+    }
+
+    if (recognition) {
+        try {
+            recognition.stop();
+        } catch (e) {
+            console.log("Stop error:", e);
         }
     }
-    
-    document.getElementById('voiceBtn').classList.remove('listening');
-    document.getElementById('chatStatus').textContent = '● Ready';
-    document.getElementById('chatStatus').classList.remove('waiting');
+
+    const voiceBtn = document.getElementById('voiceBtn');
+    if (voiceBtn) {
+        voiceBtn.classList.remove('listening');
+    }
+
+    const chatStatus = document.getElementById('chatStatus');
+    if (chatStatus) {
+        chatStatus.textContent = '● Ready';
+        chatStatus.classList.remove('waiting');
+    }
+
     partialTranscript = '';
-    log("🔇 Stopped listening", 'system');
+
+    // Chỉ log khi người dùng chủ động Stop
+    // hoặc khi cần thông báo thông thường
+    if (!silent) {
+        log("🔇 Stopped listening", 'system');
+    }
 }
 
 // ==================== LIBRARY VOICE SEARCH - maxAlternatives = 5 ====================
@@ -1164,7 +1282,7 @@ function voiceSearchLibrary() {
                 for (var j = 0; j < e.results[i].length; j++) {
                     var alt = e.results[i][j].transcript.trim();
                     var confidence = e.results[i][j].confidence || 0;
-                    var hasVietnamese = /[áàảãạăắằẳẵặâấầẩẫậđéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵ]/i.test(alt);
+                    var hasVietnamese = /[áàảãạăắằẳẵâấầẩẫậđéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵ]/i.test(alt);
                     var score = confidence + (hasVietnamese ? 0.3 : 0);
                     
                     if (score > bestScore) {
@@ -1293,8 +1411,17 @@ function autoSaveDialog() {
     }
 }
 
-function saveFile() { 
-    autoSaveDialog(); 
+function saveFile() {
+    var L = parseInputValue("dx");
+    var W = parseInputValue("dy");
+    var T = parseInputValue("dz");
+
+    if (!(L > 0 && W > 0 && T > 0)) {
+        alert("Please enter Length, Width and Thickness first.");
+        return;
+    }
+
+    autoSaveDialog();
 }
 
 function closeSaveDialog() {
@@ -1601,6 +1728,7 @@ function reset() {
     document.getElementById("r3").value = 150; 
     document.getElementById("r4").value = 150;
     hasAutoTriggeredSave = false; 
+    autoExportLock = false;
     setOri('Z'); 
     log("↺ Reset all parameters", 'system');
 }
@@ -1665,6 +1793,7 @@ var inputs = document.querySelectorAll("input");
 for (var i = 0; i < inputs.length; i++) {
     inputs[i].addEventListener("input", function() { 
         hasAutoTriggeredSave = false; 
+        autoExportLock = false;
         draw(); 
     });
 }
